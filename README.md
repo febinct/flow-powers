@@ -76,13 +76,17 @@ canonical for **HOW**. The **flow brief** is canonical for **WHY + status** and
 ### Option A — marketplace (quick: skill + hook only)
 
 ```
-/plugin marketplace add febinct/flow-powers
+/plugin marketplace add https://github.com/febinct/flow-powers.git
 /plugin install flow-powers@flow-powers
 ```
 
 Gets you the `flow-powers` skill and its SessionStart hook. You still need the
 prerequisites above, and this path does **not** wire the ambient stack
 (context-mode + LSP parsers) — for that, use Option B.
+
+> Use the full **HTTPS URL** (not the `febinct/flow-powers` shorthand) — the
+> shorthand resolves to SSH (`git@github.com:…`), which fails without SSH keys;
+> the `.git` HTTPS URL clones over HTTPS and works for any public installer.
 
 ### Option B — installer (full: skill + hook + ambient stack)
 
