@@ -68,13 +68,26 @@ canonical for **HOW**. The **flow brief** is canonical for **WHY + status** and
 
 ## Install
 
-```bash
-# prerequisites (installed, not vendored):
-#   flow >= v0.1.0-alpha.24 on PATH  — https://github.com/Facets-cloud/flow (flow init)
-#     (earlier builds lack `do --auto`/`--with` + owners; verify with `flow do -h`)
-#   superpowers plugin  — /plugin install superpowers@claude-plugins-official
+**Prerequisites** (installed, not vendored):
+- `flow` >= v0.1.0-alpha.24 on PATH — https://github.com/Facets-cloud/flow (run `flow init`).
+  Earlier builds lack `do --auto`/`--with` + owners; verify with `flow do -h`.
+- superpowers plugin — `/plugin install superpowers@claude-plugins-official`
 
-git clone --recurse-submodules <this-repo> && cd flow-powers
+### Option A — marketplace (quick: skill + hook only)
+
+```
+/plugin marketplace add febinct/flow-powers
+/plugin install flow-powers@flow-powers
+```
+
+Gets you the `flow-powers` skill and its SessionStart hook. You still need the
+prerequisites above, and this path does **not** wire the ambient stack
+(context-mode + LSP parsers) — for that, use Option B.
+
+### Option B — installer (full: skill + hook + ambient stack)
+
+```bash
+git clone --recurse-submodules https://github.com/febinct/flow-powers && cd flow-powers
 ./install.sh          # symlinks the skill + registers the SessionStart hook,
                       # then installs the ambient stack and checks LSP binaries
 ```

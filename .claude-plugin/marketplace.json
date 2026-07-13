@@ -1,0 +1,30 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "flow-powers",
+  "description": "flow-powers: chain flow's cross-session memory with superpowers' disciplined build loop into one compounding flywheel.",
+  "owner": {
+    "name": "febin.sathar"
+  },
+  "plugins": [
+    {
+      "name": "flow-powers",
+      "source": "./",
+      "version": "0.1.0",
+      "description": "Runs one build as a compounding loop: flow supplies memory + task lifecycle (outer loop), superpowers supplies disciplined execution (inner loop). Ships a SessionStart hook and an LSP-readiness doctor.",
+      "author": {
+        "name": "febin.sathar"
+      },
+      "category": "development",
+      "keywords": [
+        "flow",
+        "superpowers",
+        "memory",
+        "task-management",
+        "tdd",
+        "workflow",
+        "lsp",
+        "context-mode"
+      ]
+    }
+  ]
+}
