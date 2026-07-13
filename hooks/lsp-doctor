@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# lsp-doctor — checks that every ENABLED claude-code-lsps plugin has its language
+# server binary on PATH. The plugins only declare *how* to launch a server
+# (.lsp.json -> "command": "gopls"); the binary itself must be installed and on
+# the PATH Claude Code inherits. A missing binary is the classic "LSP silently
+# does nothing after resume" failure.
+#
+# Modes:
+#   (default)   verbose report to stdout, one line per enabled LSP. Used by install.sh.
+#   --quiet     print NOTHING when all healthy; a compact warning block otherwise.
+#               Used by the session-start hook to fold into injected context.
+# Always exits 0 — this is advisory, never fatal.
+set -uo pipefail
+
+QUIET=0
+[ "${1:-}" = "--quiet" ] && QUIET=1
+
+CLAUDE_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+SETTINGS="$CLAUDE_DIR/settings.json"
+LSP_MKT="$CLAUDE_DIR/plugins/marketplaces/claude-code-lsps"
+
+# Nothing to check if the LSP marketplace or settings aren't present.
+[ -f "$SETTINGS" ] || exit 0
+[ -d "$LSP_MKT" ] || exit 0
+
+# Enabled LSP plugins: keys like "gopls@claude-code-lsps": true in settings.json.
+enabled="$(grep -oE '"[A-Za-z0-9_-]+@claude-code-lsps"[[:space:]]*:[[:space:]]*true' "$SETTINGS" 2>/dev/null \
+  | sed -E 's/"([A-Za-z0-9_-]+)@claude-code-lsps".*/\1/' | sort -u)"
+[ -n "$enabled" ] || exit 0
+
+# fix hint for a given server binary
+hint() {
+  case "$1" in
+    gopls)              echo "go install golang.org/x/tools/gopls@latest  (then ensure \$(go env GOPATH)/bin — usually ~/go/bin — is on PATH)";;
+    pyright-langserver) echo "npm i -g pyright";;
+    vtsls)              echo "npm i -g @vtsls/language-server typescript";;
+    typescript-language-server) echo "npm i -g typescript typescript-language-server";;
+    jdtls)              echo "brew install jdtls  (needs a JDK on PATH)";;
+    rust-analyzer)      echo "rustup component add rust-analyzer";;
+    clangd)             echo "install clangd (brew install llvm / your distro's clang tools)";;
+    *)                  echo "install '$1' and ensure it's on the PATH Claude Code inherits";;
+  esac
+}
+
+report=""      # verbose lines
+missing=""     # "plugin (binary)" list for --quiet
+
+while IFS= read -r name; do
+  [ -n "$name" ] || continue
+  lspjson="$LSP_MKT/$name/.lsp.json"
+  # first "command" value in the .lsp.json (the server executable)
+  bin=""
+  if [ -f "$lspjson" ]; then
+    bin="$(grep -oE '"command"[[:space:]]*:[[:space:]]*"[^"]+"' "$lspjson" 2>/dev/null \
+      | head -1 | sed -E 's/.*"command"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/')"
+  fi
+  if [ -z "$bin" ]; then
+    report+="  ?  $name — could not read server command from .lsp.json"$'\n'
+    continue
+  fi
+  if command -v "$bin" >/dev/null 2>&1; then
+    report+="  ok $name ($bin) -> $(command -v "$bin")"$'\n'
+  else
+    report+="  !! $name ($bin) NOT ON PATH — $(hint "$bin")"$'\n'
+    missing+="$name ($bin), "
+  fi
+done <<< "$enabled"
+
+if [ "$QUIET" -eq 1 ]; then
+  if [ -n "$missing" ]; then
+    printf 'LSP not ready: %s server binary missing from PATH. ' "${missing%, }"
+    printf 'That LSP will silently do nothing until the binary is installed and Claude Code is restarted. '
+    printf 'Run flow-powers/hooks/lsp-doctor for fix commands.\n'
+  fi
+  exit 0
+fi
+
+# verbose
+printf '%s' "$report"
+[ -n "$missing" ] && echo "  (restart Claude Code after installing any missing server, then re-check.)"
+exit 0

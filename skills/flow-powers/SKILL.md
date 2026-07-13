@@ -41,6 +41,18 @@ on execution. Chained, each disciplined build permanently upgrades the
 "team-member": the KB gets richer, so the next brainstorm is sharper. That
 compounding is the whole product — not any single pass.
 
+## The stack (ambient boosters the installer wires in)
+Two capabilities the loop assumes are present (best-effort — it still runs without
+them, just noisier and blinder):
+- **context-mode** — route large/raw tool output (test runs, logs, greps, file
+  dumps) through its `ctx_*` tools so the bytes stay in the sandbox, not the
+  conversation. A gated superpowers build produces a lot of output; this is what
+  keeps a long session from drowning in it.
+- **LSP parsers** (pyright / vtsls / jdtls / gopls / …) — real code intelligence
+  (definitions, references, diagnostics) for superpowers' edits and its
+  verification gate. They surface as diagnostics after edits, **not** as callable
+  tools — so "nothing new in the tool list" is expected, not a failure.
+
 ## The one rule (prevents drift)
 
 The **plan doc** (`docs/superpowers/plans/…md`, git-tracked with the code) is
@@ -119,4 +131,9 @@ After `finishing-a-development-branch` merges/PRs the work:
   (it creates a task named "help"); for usage run `flow` or `flow <cmd>` bare.
 - Evidence before "done" — show test + review output.
 - Blocked? Set the flow task `waiting_on` and stop; don't guess.
+- LSP silent? A plugin only declares *how* to launch its server — the server
+  binary must be on the PATH Claude Code inherits, and CC must be **restarted**
+  (not `--resume`d) after enabling a plugin. If defs/diagnostics are dead, check
+  `command -v <server>` (e.g. gopls lives in `~/go/bin`, which must be on PATH).
+  The session-start hook warns when an enabled LSP's binary is missing.
 - CLAUDE.md / direct user instructions override this skill.

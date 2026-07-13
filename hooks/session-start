@@ -17,12 +17,31 @@ one into the other. Write a flow progress note at each phase gate (tests +
 review pass), and `flow done` at the end.
 EOF
 
+# Fold in an LSP readiness warning ONLY when an enabled language server's binary
+# is missing from PATH (the classic "LSP does nothing after resume" trap).
+# Silent when the stack is healthy. Never fatal.
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -x "$HERE/lsp-doctor" ]; then
+  LSP_WARN="$("$HERE/lsp-doctor" --quiet 2>/dev/null || true)"
+  [ -n "$LSP_WARN" ] && MSG="$MSG"$'\n\n'"$LSP_WARN"
+fi
+
 # JSON-escape (backslash, quote, newline).
 esc="${MSG//\\/\\\\}"
 esc="${esc//\"/\\\"}"
 esc="${esc//$'\n'/\\n}"
 
-if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -z "${COPILOT_CLI:-}" ]; then
+# Emit in the shape the current platform actually consumes:
+#   Cursor      -> additional_context (snake_case)
+#   Claude Code -> hookSpecificOutput.additionalContext (nested)
+#   Copilot/SDK -> additionalContext (top-level)
+# Key Claude Code on CLAUDECODE, NOT CLAUDE_PLUGIN_ROOT: this hook installs into
+# user settings.json, and CLAUDE_PLUGIN_ROOT is set only for *plugin* hooks — so
+# keying on it would drop us to the SDK branch and Claude Code would ignore the
+# context. (flow's own user-settings hook emits hookSpecificOutput too.)
+if [ -n "${CURSOR_PLUGIN_ROOT:-}" ]; then
+  printf '{\n  "additional_context": "%s"\n}\n' "$esc"
+elif [ -n "${CLAUDECODE:-}" ] && [ -z "${COPILOT_CLI:-}" ]; then
   printf '{\n  "hookSpecificOutput": {\n    "hookEventName": "SessionStart",\n    "additionalContext": "%s"\n  }\n}\n' "$esc"
 else
   printf '{\n  "additionalContext": "%s"\n}\n' "$esc"
