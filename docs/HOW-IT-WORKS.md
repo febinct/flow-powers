@@ -1,8 +1,21 @@
-# How flow and superpowers work
+# How the flow-powers stack works
 
-Background for anyone using flow-powers. This explains each tool on its own —
+Background for anyone using flow-powers. This explains each piece on its own —
 what it is, the mechanism that makes it tick, and the commands/skills you'll
-touch. For how they combine, see [`DESIGN.md`](DESIGN.md).
+touch. For how flow + superpowers combine, see [`DESIGN.md`](DESIGN.md).
+
+The stack has two **core** tools and two **ambient boosters**:
+
+| Piece | Role | Kind |
+|---|---|---|
+| **flow** | memory + task lifecycle (the OUTER loop) | Go CLI + hooks |
+| **superpowers** | disciplined execution (the INNER loop) | CC plugin (skills) |
+| **context-mode** | keeps large tool output out of the conversation | CC plugin (MCP + hooks) |
+| **LSP parsers** | real code intelligence for edits + verification | CC plugins (native LSP) |
+
+flow + superpowers are the flywheel; context-mode and the LSP parsers are
+best-effort amplifiers the loop assumes are present (it still runs without them,
+just noisier and blinder). The installer wires all four.
 
 ---
 
@@ -113,11 +126,98 @@ Works best on a platform with subagents (Claude Code qualifies).
 
 ---
 
+---
+
+## context-mode — context hygiene (keep raw bytes out of the conversation)
+
+**Repo:** https://github.com/mksglu/context-mode · **What it is:** a Claude Code
+plugin (an MCP server + a skill + hooks) that lets the agent do work in a
+sandbox and surface only the *derived answer*, so the raw bytes never enter the
+conversation. Every byte a tool returns normally costs context for the rest of
+the session; context-mode is the "think in code, don't read raw data into the
+window" discipline made into tooling.
+
+### The mechanism that matters
+- **`ctx_batch_execute`** — run shell commands in parallel, auto-index each
+  output, and (with queries) return matching sections in the *same* round trip.
+  The primary research tool: gather + search without a second call.
+- **`ctx_execute` / `ctx_execute_file`** — run code (JS/shell/python) over data
+  to filter, count, parse, aggregate. Only what you `console.log()` reaches the
+  conversation; the source data stays in the sandbox.
+- **`ctx_search`** — full-text search over everything indexed (your captures +
+  auto-captured session memory). `sort: "timeline"` recovers prior decisions,
+  errors, and plans — **it survives `/clear` and compaction**, so a resumed or
+  compacted session can recover what it was doing.
+- **`ctx_fetch_and_index`** — fetch a URL and index it; page bytes never hit the
+  conversation, results are searchable.
+
+### Why it matters for flow-powers
+A gated superpowers build emits a *lot* of output — test runs, greps, logs, file
+dumps. Routed through `ctx_*`, that output is indexed instead of pasted, so a
+long build gets further before hitting the session ceiling — directly
+reinforcing the park-and-resume story (see `DESIGN.md` → Session-limit
+mitigation). Writes still use the native Write/Edit tools; context-mode is for
+gathering and processing, not persisting files.
+
+### Install
+```
+/plugin marketplace add mksglu/context-mode
+/plugin install context-mode@context-mode
+```
+
+---
+
+## LSP parsers — real code intelligence for the build
+
+**Repo:** https://github.com/Piebald-AI/claude-code-lsps · **What it is:** a
+marketplace of thin, per-language Claude Code plugins that plug real Language
+Server Protocol servers into Claude Code's **native LSP support**. Enabled, they
+give the agent go-to-definition, find-references, hover types, and diagnostics —
+so superpowers edits against real symbol knowledge and catches type/reference
+errors immediately, not at test time.
+
+### How it works — two parts, both required
+1. **The plugin** ships a `.lsp.json` declaring *how* to launch a server —
+   e.g. gopls: `{"go": {"command": "gopls", "transport": "stdio",
+   "extensionToLanguage": {".go": "go"}}}`. Enabling the plugin tells Claude
+   Code that this server exists.
+2. **The server binary** (`gopls`, `pyright-langserver`, `vtsls`, `jdtls`, …)
+   must be **installed separately and on the PATH Claude Code inherits.** The
+   plugin only declares the launch command; it does not bundle the server.
+
+When both are present and Claude Code is **restarted**, CC spawns the server and
+surfaces its output as **diagnostics and navigation — NOT as callable `mcp__`
+tools.** So "no new tools appeared" is expected, not a failure.
+
+### The resume trap (why this stack ships a doctor)
+Plugin enabled but the binary missing or not on PATH → the LSP **silently does
+nothing.** This is the classic "worked in one session, dead after resume"
+confusion — often just a PATH issue (e.g. `go install gopls` drops the binary in
+`~/go/bin`, which must be on PATH). `hooks/lsp-doctor` checks every enabled LSP's
+server binary and prints fix commands; the `session-start` hook folds a warning
+into context when one is missing, so the failure surfaces instead of hiding.
+
+### Install
+```
+/plugin marketplace add Piebald-AI/claude-code-lsps
+/plugin install pyright@claude-code-lsps          # + vtsls / jdtls / gopls / …
+# then install the server binary, e.g.:
+go install golang.org/x/tools/gopls@latest        # ensure ~/go/bin is on PATH
+npm i -g pyright @vtsls/language-server typescript
+```
+
+---
+
 ## One line each
 - **flow** decides *what/why* and **remembers** — its `flow done` sweep grows a
   KB that auto-injects into future sessions.
 - **superpowers** decides *how* and **executes with discipline** — but forgets
   everything at session end.
+- **context-mode** keeps the session **lean** — large tool output is indexed and
+  searched, not pasted, so long builds run further.
+- **LSP parsers** make edits and verification **sighted** — real defs, refs, and
+  diagnostics instead of guessing.
 
-flow-powers chains them so the memory feeds the discipline and the discipline
-feeds the memory. See [`DESIGN.md`](DESIGN.md).
+flow-powers chains flow + superpowers so memory feeds discipline and discipline
+feeds memory; context-mode and the LSP parsers keep that loop lean and sighted.
+See [`DESIGN.md`](DESIGN.md).

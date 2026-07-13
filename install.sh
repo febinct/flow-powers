@@ -22,7 +22,9 @@ fi
 # binary + superpowers plugin. If cloned without --recurse-submodules, init them
 # so the reference is present, but never fail the install over it.
 if [ -f "$REPO/.gitmodules" ] && git -C "$REPO" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  if [ -z "$(ls -A "$REPO/vendor/flow" 2>/dev/null)" ] || [ -z "$(ls -A "$REPO/vendor/superpowers" 2>/dev/null)" ]; then
+  # `submodule status` prefixes any uninitialized submodule with '-' — covers all
+  # four (flow, superpowers, context-mode, claude-code-lsps) without hardcoding.
+  if git -C "$REPO" submodule status 2>/dev/null | grep -q '^-'; then
     echo "  .. submodules missing — fetching reference (git submodule update --init)"
     git -C "$REPO" submodule update --init --recursive 2>&1 | sed 's/^/     /' \
       || echo "  ! note: submodule fetch failed — reference-only, install continues"

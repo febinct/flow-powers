@@ -40,6 +40,19 @@ phases. flow touches only the **edges**:
 > forward automatically via the sweep — no manual step. Recurring build shapes →
 > save a **flow playbook** to replay the recipe.
 
+## Ambient stack (best-effort amplifiers the installer wires in)
+
+Two capabilities the loop assumes are present — it runs without them, just
+noisier and blinder:
+
+- **[context-mode](https://github.com/mksglu/context-mode)** — routes large tool
+  output (test runs, logs, greps) through a sandbox so raw bytes stay out of the
+  conversation. Keeps long gated builds from drowning the context window.
+- **[LSP parsers](https://github.com/Piebald-AI/claude-code-lsps)**
+  (pyright / vtsls / jdtls / gopls / …) — real code intelligence (defs, refs,
+  diagnostics) for superpowers' edits and its verification gate. They surface as
+  diagnostics, **not** as tools, and need the server binary on PATH + a restart.
+
 ## The one rule (prevents drift)
 
 The **plan doc** (`docs/superpowers/plans/…md`, git-tracked with the code) is
@@ -48,10 +61,10 @@ canonical for **HOW**. The **flow brief** is canonical for **WHY + status** and
 
 ## Learn more
 
-- [`HOW-IT-WORKS.md`](HOW-IT-WORKS.md) — how **flow** and **superpowers** each
-  work on their own (model, mechanism, commands/skills). Start here if either
-  tool is new to you.
-- [`DESIGN.md`](DESIGN.md) — the full seam-by-seam integration design.
+- [`docs/HOW-IT-WORKS.md`](docs/HOW-IT-WORKS.md) — how **flow**, **superpowers**,
+  **context-mode**, and the **LSP parsers** each work on their own (model,
+  mechanism, commands/skills). Start here if any piece is new to you.
+- [`docs/DESIGN.md`](docs/DESIGN.md) — the full seam-by-seam integration design.
 
 ## Install
 
@@ -62,11 +75,20 @@ canonical for **HOW**. The **flow brief** is canonical for **WHY + status** and
 #   superpowers plugin  — /plugin install superpowers@claude-plugins-official
 
 git clone --recurse-submodules <this-repo> && cd flow-powers
-./install.sh          # symlinks the skill, registers the SessionStart hook
+./install.sh          # symlinks the skill + registers the SessionStart hook,
+                      # then installs the ambient stack and checks LSP binaries
 ```
 
-Then start a new Claude Code session (or `/clear`). The hook injects a pointer;
-the `flow-powers` skill triggers when you start real build work.
+`install.sh` also (best-effort) adds the context-mode + claude-code-lsps
+marketplaces, installs context-mode plus an LSP set (override with
+`FLOW_POWERS_LSPS="pyright gopls"`, or `""` to skip), auto-installs `gopls` when
+Go is present, and runs `hooks/lsp-doctor` to flag any LSP server binary missing
+from PATH. It degrades gracefully to printed instructions if the `claude` CLI
+isn't found.
+
+Then **restart Claude Code** (a full relaunch, not `--resume`) so the hook,
+skill, and any newly-enabled plugins + language servers load. The hook injects a
+pointer; the `flow-powers` skill triggers when you start real build work.
 
 ## Layout
 
@@ -74,14 +96,19 @@ the `flow-powers` skill triggers when you start real build work.
 flow-powers/
 ├── skills/flow-powers/SKILL.md   the orchestration protocol (the heart)
 ├── hooks/hooks.json              SessionStart registration
-├── hooks/session-start           injects the flow-powers pointer
+├── hooks/session-start           injects the flow-powers pointer (+ LSP warning)
+├── hooks/lsp-doctor              checks each enabled LSP's server binary is on PATH
 ├── .claude-plugin/plugin.json    Claude Code plugin manifest
-├── install.sh                    idempotent installer (backs up settings.json)
-├── HOW-IT-WORKS.md               how flow & superpowers each work (background)
-├── DESIGN.md                     mental model + seams + tradeoffs
+├── install.sh                    idempotent installer (skill, hook, stack, backups)
+├── docs/
+│   ├── HOW-IT-WORKS.md           how flow, superpowers, context-mode & LSPs each work
+│   └── DESIGN.md                 mental model + seams + tradeoffs
+├── blog.md                       the story: why chain these, what compounds
 └── vendor/                       pinned submodules (reference only)
-    ├── flow/          @ v0.1.0-alpha.24
-    └── superpowers/   @ v6.1.1
+    ├── flow/               @ v0.1.0-alpha.24
+    ├── superpowers/        @ v6.1.1
+    ├── context-mode/       @ v1.0.169+
+    └── claude-code-lsps/   @ main
 ```
 
 `vendor/` is pinned reference so the glue matches real upstream behaviour; the

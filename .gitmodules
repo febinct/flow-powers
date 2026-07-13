@@ -4,3 +4,9 @@
 [submodule "vendor/superpowers"]
 	path = vendor/superpowers
 	url = https://github.com/obra/superpowers.git
+[submodule "vendor/context-mode"]
+	path = vendor/context-mode
+	url = https://github.com/mksglu/context-mode.git
+[submodule "vendor/claude-code-lsps"]
+	path = vendor/claude-code-lsps
+	url = https://github.com/Piebald-AI/claude-code-lsps.git

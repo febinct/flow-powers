@@ -82,8 +82,9 @@ checkboxes double as flow's resumable phase state.
 
 ## What this is NOT
 
-- Not a fork or a merged binary. Both stay as pinned submodules under `vendor/`
-  for reference; the runtime targets the **installed** `flow` + superpowers.
+- Not a fork or a merged binary. All four upstreams (flow, superpowers,
+  context-mode, claude-code-lsps) stay as pinned submodules under `vendor/` for
+  reference; the runtime targets your **installed** copies, not the vendored ones.
 - Not a re-implementation of either. It's a thin orchestrator that binds flow's
   memory to superpowers' discipline at four edges — and otherwise gets out of
   the way.
