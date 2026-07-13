@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# SessionStart hook for flow-powers.
+# Injects a short pointer so the coordinator runs the combined flow + superpowers
+# loop when real build work starts. Mirrors superpowers' Claude Code output shape.
+set -euo pipefail
+
+read -r -d '' MSG <<'EOF' || true
+flow-powers is installed. When you start or resume real implementation work
+(feature, non-trivial bug, migration) in this session, invoke the `flow-powers`
+skill FIRST. It runs the combined loop: flow (bind task, brief+KB, progress
+notes, `flow done`) for the outer loop, superpowers (brainstorm -> plan ->
+gated build -> finish) for the inner loop.
+
+One rule: the plan doc under docs/superpowers/plans/ is canonical for HOW; the
+flow brief is canonical for WHY + status and links to the plan. Do not duplicate
+one into the other. Write a flow progress note at each phase gate (tests +
+review pass), and `flow done` at the end.
+EOF
+
+# JSON-escape (backslash, quote, newline).
+esc="${MSG//\\/\\\\}"
+esc="${esc//\"/\\\"}"
+esc="${esc//$'\n'/\\n}"
+
+if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -z "${COPILOT_CLI:-}" ]; then
+  printf '{\n  "hookSpecificOutput": {\n    "hookEventName": "SessionStart",\n    "additionalContext": "%s"\n  }\n}\n' "$esc"
+else
+  printf '{\n  "additionalContext": "%s"\n}\n' "$esc"
+fi
+
+exit 0

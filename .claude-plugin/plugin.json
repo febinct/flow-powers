@@ -1,0 +1,8 @@
+{
+  "name": "flow-powers",
+  "version": "0.1.0",
+  "description": "Combines flow (cross-session task memory) with superpowers (in-session dev methodology) into one build loop.",
+  "author": "febin.sathar",
+  "skills": ["./skills/flow-powers"],
+  "hooks": "./hooks/hooks.json"
+}

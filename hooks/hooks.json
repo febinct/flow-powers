@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT:-$HOME/codebase/flow-powers}/hooks/session-start\"",
+            "async": false
+          }
+        ]
+      }
+    ]
+  }
+}
