@@ -17,6 +17,18 @@ if ! find "$CLAUDE_DIR/plugins" -maxdepth 3 -iname '*superpower*' 2>/dev/null | 
   echo "  ! warning: superpowers plugin not detected — install via: /plugin install superpowers@claude-plugins-official"
 fi
 
+# --- 0. reference submodules (best-effort; NOT required at runtime) -----------
+# vendor/ is pinned reference only — the tool runs against the installed flow
+# binary + superpowers plugin. If cloned without --recurse-submodules, init them
+# so the reference is present, but never fail the install over it.
+if [ -f "$REPO/.gitmodules" ] && git -C "$REPO" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  if [ -z "$(ls -A "$REPO/vendor/flow" 2>/dev/null)" ] || [ -z "$(ls -A "$REPO/vendor/superpowers" 2>/dev/null)" ]; then
+    echo "  .. submodules missing — fetching reference (git submodule update --init)"
+    git -C "$REPO" submodule update --init --recursive 2>&1 | sed 's/^/     /' \
+      || echo "  ! note: submodule fetch failed — reference-only, install continues"
+  fi
+fi
+
 # --- 1. skill (symlink so repo edits propagate) ------------------------------
 mkdir -p "$SKILLS_DIR"
 ln -sfn "$REPO/skills/flow-powers" "$SKILLS_DIR/flow-powers"
