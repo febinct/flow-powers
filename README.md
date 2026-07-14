@@ -2,11 +2,15 @@
 
 [![tests](https://github.com/febinct/flow-powers/actions/workflows/test.yml/badge.svg)](https://github.com/febinct/flow-powers/actions/workflows/test.yml)
 
-A Claude Code plugin for real build work: a **compounding flywheel** at its core,
-an **ambient stack** that keeps the loop lean and sighted, and a small set of
-**skills** — all wired by one installer.
+A Claude Code plugin that turns each build into a **compounding loop**: flow
+remembers, superpowers executes, and every finished build makes the next one
+smarter. Around that loop it wires an **ambient stack** (context, code
+intelligence, browser verification) and ships a few **skills** — installed
+together, one command.
 
-The flywheel is two tools, each doing only what it's best at:
+## The idea
+
+Two tools, each doing only what it's best at:
 
 - **[flow](https://github.com/Facets-cloud/flow)** — memory + judgment. What to
   work on, why, status across days, and a KB that `flow done` grows from each
@@ -17,22 +21,11 @@ The flywheel is two tools, each doing only what it's best at:
 
 Neither lacks a *step* — they lack each other's *nature*. Chained, superpowers'
 quality output feeds flow's memory, and flow's memory makes superpowers' next
-brainstorm smarter. That compounding is the point.
+brainstorm smarter. **That compounding is the point.**
 
-Around that core, flow-powers wires in an **ambient stack** — context-mode (keep
-raw output out of the window), LSP parsers (real code intelligence), and the
-Playwright MCP (browser verification for UI changes) — and ships **skills**
-(`flow-powers` the loop, `duckdb-analysis` for SQL over data files). See the
-[ambient stack](#ambient-stack-best-effort-amplifiers-the-installer-wires-in)
-and [skills](#skills-in-this-repo) sections below.
+![flow-powers — the compounding loop](docs/diagrams/flow-powers.svg)
 
-```
-   flow KB (auto-injected)  ──►  superpowers brainstorm starts WARM
-            ▲                                   │
-            │                                   ▼
-   flow done sweeps the           plan → subagent-reviewed gated build
-   transcript into the KB   ◄──   → finish
-```
+## The loop
 
 superpowers owns the **HOW** end to end — flow-powers does not micromanage its
 phases. flow touches only the **edges**:
@@ -47,30 +40,21 @@ phases. flow touches only the **edges**:
 4  Close         flow done <task>  → transcript swept into KB → next build smarter
 ```
 
+**The one rule (prevents drift):** the **plan doc** (`docs/superpowers/plans/…md`,
+git-tracked with the code) is canonical for **HOW**; the **flow brief** is
+canonical for **WHY + status** and *links* to the plan. Never duplicate one into
+the other.
+
 > Notes and KB are **markdown files you write** (`updates/*.md`, `kb/*.md`) —
-> `flow note` / `flow kb` are not commands. The task lifecycle is gated on
-> `flow do`: no bind → can't go in-progress, can't `flow done`. Lessons carry
-> forward automatically via the sweep — no manual step. Recurring build shapes →
-> save a **flow playbook** to replay the recipe.
+> `flow note` / `flow kb` are not commands. The lifecycle is gated on `flow do`:
+> no bind → can't go in-progress, can't `flow done`. Lessons carry forward
+> automatically via the sweep. Recurring build shapes → save a **flow playbook**.
 
-## Architecture
+## The ambient stack
 
-**flow-powers — the compounding loop**
-
-![flow-powers architecture](docs/diagrams/flow-powers.svg)
-
-**duckdb-analysis — query data, keep it out of context**
-
-![duckdb-analysis architecture](docs/diagrams/duckdb-analysis.svg)
-
-**arch-diagram-builder — IR → self-contained HTML**
-
-![arch-diagram-builder architecture](docs/diagrams/arch-diagram-builder.svg)
-
-## Ambient stack (best-effort amplifiers the installer wires in)
-
-Three capabilities the loop assumes are present — it runs without them, just
-noisier, blinder, and unable to *see* UI changes:
+Three capabilities the loop assumes are present — it still runs without them,
+just noisier, blinder, and unable to *see* UI changes. The installer wires all
+three:
 
 - **[context-mode](https://github.com/mksglu/context-mode)** — routes large tool
   output (test runs, logs, greps) through a sandbox so raw bytes stay out of the
@@ -81,147 +65,136 @@ noisier, blinder, and unable to *see* UI changes:
   diagnostics, **not** as tools, and need the server binary on PATH + a restart.
 - **[Playwright MCP](https://github.com/microsoft/playwright-mcp)** — agent
   browser control (`mcp__playwright__browser_*`). The **frontend arm** of the
-  verification gate: for UI changes, the agent drives the running app —
-  navigate, click, snapshot, screenshot — so "it renders and behaves" is
-  evidenced, not assumed. It's browser control, **not** a test runner. Installed
-  at user scope; skip via `FLOW_POWERS_PLAYWRIGHT=0`.
+  verification gate: for UI changes the agent drives the running app — navigate,
+  click, snapshot, screenshot — so "it renders and behaves" is evidenced, not
+  assumed. Browser control, **not** a test runner. Skip via `FLOW_POWERS_PLAYWRIGHT=0`.
 
-## The one rule (prevents drift)
+## The skills
 
-The **plan doc** (`docs/superpowers/plans/…md`, git-tracked with the code) is
-canonical for **HOW**. The **flow brief** is canonical for **WHY + status** and
-*links* to the plan. Never duplicate one into the other.
+Three skills ship in this repo and install together. Each is one dir under
+`skills/` with a `SKILL.md`; `plugin.json` lists them.
 
-## Learn more
+### `flow-powers` — the orchestration loop
 
-- [`docs/HOW-IT-WORKS.md`](docs/HOW-IT-WORKS.md) — how **flow**, **superpowers**,
-  **context-mode**, the **LSP parsers**, and the **Playwright MCP** each work on
-  their own (model, mechanism, commands/skills). Start here if any piece is new
-  to you.
-- [`docs/DESIGN.md`](docs/DESIGN.md) — the full seam-by-seam integration design.
+The protocol above, written as a skill: it triggers on real build work, binds
+the flow task, hands off to superpowers, marks the trail, and closes with
+`flow done`. This is the plugin's heart — see [`docs/HOW-IT-WORKS.md`](docs/HOW-IT-WORKS.md).
+
+### `duckdb-analysis` — SQL over data files
+
+![duckdb-analysis](docs/diagrams/duckdb-analysis.svg)
+
+Query tabular files (CSV / TSV / Parquet / JSON / Excel) with SQL through a
+bundled, dependency-free DuckDB `uv` tool
+(`skills/duckdb-analysis/scripts/duckdb_tool.py`). It prints only the derived
+result — raw rows never enter the conversation, the same "keep data out of the
+window" discipline as context-mode. Requires `uv` on PATH.
+
+### `arch-diagram-builder` — English → self-contained HTML diagram
+
+![arch-diagram-builder](docs/diagrams/arch-diagram-builder.svg)
+
+Describe a system as a small JSON IR; a zero-dep engine
+(`scripts/diagram.mjs`) does **deterministic auto-layout** (ranked placement,
+swimlanes, orthogonal routing), **validation** (bad refs, overlaps, crossings —
+with hints), and renders one self-contained HTML file. Dark/light toggle,
+semantic tech categories, a legend, opt-in flow animation, and export to
+PNG / JPEG / WebP (up to 4×) or a dual-theme SVG. CLI: `render / validate /
+check / inspect / svg / examples / demo / doctor`. Requires `node` ≥18.
+(The three diagrams in this README were drawn by it, from `docs/diagrams/src/`.)
 
 ## Install
 
 **Prerequisites** (installed, not vendored):
-- `flow` >= v0.1.0-alpha.24 on PATH — https://github.com/Facets-cloud/flow (run `flow init`).
-  Earlier builds lack `do --auto`/`--with` + owners; verify with `flow do -h`.
+
+- `flow` ≥ v0.1.0-alpha.24 on PATH — https://github.com/Facets-cloud/flow (run
+  `flow init`; earlier builds lack `do --auto`/`--with` + owners).
 - superpowers plugin — `/plugin install superpowers@claude-plugins-official`
 
-### Option A — marketplace (quick: skill + hook only)
+### Option A — marketplace (quick: skills + hook)
 
 ```
 /plugin marketplace add https://github.com/febinct/flow-powers.git
 /plugin install flow-powers@flow-powers
 ```
 
-Gets you both skills (`flow-powers` + `duckdb-analysis`) and the SessionStart
-hook. You still need the prerequisites above, and this path does **not** wire the
-ambient stack (context-mode + LSP parsers + Playwright MCP) — for that, use
-Option B. (`duckdb-analysis` also needs `uv` on PATH at runtime.)
+Gets you all three skills and the SessionStart hook. This path does **not** wire
+the ambient stack (context-mode / LSP / Playwright) — for that, use Option B.
 
-> Use the full **HTTPS URL** (not the `febinct/flow-powers` shorthand) — the
-> shorthand resolves to SSH (`git@github.com:…`), which fails without SSH keys;
-> the `.git` HTTPS URL clones over HTTPS and works for any public installer.
+> Use the full **HTTPS URL**, not the `febinct/flow-powers` shorthand — the
+> shorthand resolves to SSH and fails without SSH keys; the `.git` URL clones
+> over HTTPS for any public installer.
 
-### Option B — installer (full: skill + hook + ambient stack)
+### Option B — installer (full: skills + hook + ambient stack)
 
 ```bash
 git clone --recurse-submodules https://github.com/febinct/flow-powers && cd flow-powers
-./install.sh          # symlinks all skills + registers the SessionStart hook,
-                      # then installs the ambient stack and checks LSP binaries
+./install.sh
 ```
 
-`install.sh` also (best-effort) adds the context-mode + claude-code-lsps
-marketplaces, installs context-mode plus an LSP set (override with
-`FLOW_POWERS_LSPS="pyright gopls"`, or `""` to skip), adds the **Playwright MCP**
-at user scope (skip with `FLOW_POWERS_PLAYWRIGHT=0`), auto-installs `gopls` when
-Go is present, and runs `hooks/lsp-doctor` to flag any LSP server binary missing
-from PATH. It degrades gracefully to printed instructions if the `claude` CLI
-isn't found.
+`install.sh` symlinks every skill, registers the SessionStart hook, then
+best-effort wires the stack: adds the context-mode + claude-code-lsps
+marketplaces, installs context-mode + an LSP set (override `FLOW_POWERS_LSPS`,
+or `""` to skip), adds the Playwright MCP at user scope
+(`FLOW_POWERS_PLAYWRIGHT=0` to skip), auto-installs `gopls` when Go is present,
+and runs `hooks/lsp-doctor` to flag any LSP server binary missing from PATH. It
+degrades to printed instructions if the `claude` CLI isn't found.
 
-Then **restart Claude Code** (a full relaunch, not `--resume`) so the hook,
-skill, and any newly-enabled plugins + language servers + MCP servers load. The
-hook injects a pointer; the `flow-powers` skill triggers when you start real
-build work.
+Either way, **restart Claude Code** (a full relaunch, not `--resume`) so the
+hook, skills, and any new plugins / language servers / MCP servers load.
 
-## Layout
+## Reference
+
+<details>
+<summary><b>Repo layout</b></summary>
 
 ```
 flow-powers/
 ├── skills/                       one dir per skill (each with a SKILL.md)
 │   ├── flow-powers/SKILL.md      the orchestration protocol (the heart)
-│   ├── duckdb-analysis/          SQL over CSV/Parquet/Excel via a bundled DuckDB tool
-│   │   ├── SKILL.md
-│   │   └── scripts/duckdb_tool.py
-│   └── arch-diagram-builder/     English → self-contained themeable HTML diagram
-│       ├── SKILL.md
-│       └── scripts/             engine.mjs (layout+validate+render), diagram.mjs
-│                                (CLI), build-diagram.mjs, template.html, examples/
-├── hooks/hooks.json              SessionStart registration
-├── hooks/session-start           injects the flow-powers pointer (+ LSP warning)
-├── hooks/lsp-doctor              checks each enabled LSP's server binary is on PATH
-├── .claude-plugin/plugin.json    Claude Code plugin manifest
-├── .claude-plugin/marketplace.json  makes the repo /plugin-installable
-├── install.sh                    idempotent installer (skill, hook, stack, backups)
-├── docs/
-│   ├── HOW-IT-WORKS.md           how flow, superpowers, context-mode, LSPs & Playwright each work
-│   └── DESIGN.md                 mental model + seams + tradeoffs
-├── blog.md                       the story: why chain these, what compounds
-└── vendor/                       pinned submodules (reference only)
-    ├── flow/               @ v0.1.0-alpha.24
-    ├── superpowers/        @ v6.1.1
-    ├── context-mode/       @ v1.0.169+
-    ├── claude-code-lsps/   @ main
-    └── playwright-mcp/     @ v0.0.78
+│   ├── duckdb-analysis/          SQL over data files via a bundled DuckDB uv tool
+│   └── arch-diagram-builder/     JSON IR → self-contained themeable HTML diagram
+│                                 (engine.mjs, diagram.mjs, template.html, examples/)
+├── hooks/                        session-start (pointer + LSP warning), lsp-doctor, hooks.json
+├── .claude-plugin/               plugin.json + marketplace.json (makes the repo installable)
+├── install.sh                    idempotent installer (skills, hook, stack, backups)
+├── docs/                         HOW-IT-WORKS.md, DESIGN.md, diagrams/
+├── tests/test-flow-powers.sh     regression suite (runs in CI)
+└── vendor/                       pinned reference submodules (flow, superpowers,
+                                  context-mode, claude-code-lsps, playwright-mcp)
 ```
 
-`vendor/` is pinned reference so the glue matches real upstream behaviour; the
-runtime uses your **installed** tools + plugins (flow, superpowers, context-mode,
-the LSP parsers, the Playwright MCP), never the vendored copies. Update reference
-with `git submodule update --remote`.
+`vendor/` is pinned reference only — the runtime uses your **installed** tools,
+never the vendored copies. Update with `git submodule update --remote`.
+</details>
 
-### Skills in this repo
-
-- **`flow-powers`** — the orchestration loop (this README's subject).
-- **`duckdb-analysis`** — query tabular files (CSV / TSV / Parquet / JSON /
-  Excel) with SQL through a bundled, dependency-free DuckDB `uv` tool
-  (`skills/duckdb-analysis/scripts/duckdb_tool.py`). Prints only the derived
-  result; raw rows never enter the conversation. Pairs with context-mode as the
-  "keep data out of the window" discipline. Requires `uv` on PATH.
-- **`arch-diagram-builder`** — turn a plain-English description into a
-  self-contained, themeable HTML diagram (architecture / workflow / sequence /
-  data-flow / state). A bundled zero-dep engine (`scripts/diagram.mjs`) takes a
-  small JSON IR and does **deterministic auto-layout** (ranked placement,
-  swimlanes, orthogonal edge routing), **validation** (bad refs, overlaps,
-  edge-crossings with hints), and rendering. Dark/light toggle, semantic tech
-  categories, a legend, opt-in flow animation, and export to PNG / JPEG / WebP
-  (native up to 4×) or a dual-theme SVG. CLI: `render / validate / check /
-  inspect / examples / demo / doctor`. The skill also runs a **Playwright-MCP
-  feedback loop** — render, screenshot, look, fix — before reporting done.
-  Requires `node` (≥18) on PATH.
-
-### Adding a skill
-
-The repo hosts multiple skills. To add one:
+<details>
+<summary><b>Adding a skill</b></summary>
 
 1. Create `skills/<name>/SKILL.md` (with `name` + `description` frontmatter).
-2. List it in `.claude-plugin/plugin.json` →
+2. Add it to `.claude-plugin/plugin.json` →
    `"skills": ["./skills/flow-powers", "./skills/<name>"]`.
 
-That's it — `install.sh` symlinks **every** `skills/*/SKILL.md` automatically (no
-installer edit), and marketplace installs read the `plugin.json` array. Hooks are
-shared at the plugin level, so a new skill doesn't need its own hook.
+`install.sh` symlinks every `skills/*/SKILL.md` automatically and marketplace
+installs read the array. Hooks are shared at the plugin level, so a new skill
+needs no hook of its own.
+</details>
 
-## Tests
+<details>
+<summary><b>Tests</b></summary>
 
 ```bash
 bash tests/test-flow-powers.sh
 ```
 
-A non-destructive regression suite (fixture config dirs + controlled PATH, never
-touches your real `~/.claude`): the LSP doctor, the SessionStart hook's platform
-detection + LSP warning, `install.sh` branches, the multi-skill symlink loop +
-name-clash guard, the DuckDB tool (aggregate / join / parquet round-trip /
-identifier safety), the skill + plugin manifests, and the vendored submodules.
-Runs on every push/PR via [GitHub Actions](.github/workflows/test.yml) (needs
-`uv` locally for the DuckDB checks).
+A non-destructive suite (fixture config dirs + controlled PATH, never touches
+your real `~/.claude`): the LSP doctor, the SessionStart hook's platform
+detection, `install.sh` branches, the multi-skill symlink loop + name-clash
+guard, the DuckDB tool, the diagram engine (all 5 types, validation, export),
+manifests, and submodules. Runs on every push/PR via
+[GitHub Actions](.github/workflows/test.yml) (needs `node` + `uv` locally).
+</details>
+
+**Deeper docs:** [`docs/HOW-IT-WORKS.md`](docs/HOW-IT-WORKS.md) (each tool on its
+own) · [`docs/DESIGN.md`](docs/DESIGN.md) (seam-by-seam integration) ·
+[`blog.md`](blog.md) (why chain these).
