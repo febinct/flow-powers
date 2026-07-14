@@ -31,10 +31,19 @@ if [ -f "$REPO/.gitmodules" ] && git -C "$REPO" rev-parse --is-inside-work-tree 
   fi
 fi
 
-# --- 1. skill (symlink so repo edits propagate) ------------------------------
+# --- 1. skills (symlink each so repo edits propagate) ------------------------
+# Loop over every skill dir under skills/ — adding a new skill is just dropping
+# a dir with a SKILL.md (and listing it in plugin.json); no installer edit.
 mkdir -p "$SKILLS_DIR"
-ln -sfn "$REPO/skills/flow-powers" "$SKILLS_DIR/flow-powers"
-echo "  ok: skill -> $SKILLS_DIR/flow-powers"
+skill_count=0
+for skill in "$REPO"/skills/*/; do
+  [ -f "$skill/SKILL.md" ] || continue
+  name="$(basename "$skill")"
+  ln -sfn "${skill%/}" "$SKILLS_DIR/$name"
+  echo "  ok: skill $name -> $SKILLS_DIR/$name"
+  skill_count=$((skill_count + 1))
+done
+[ "$skill_count" -eq 0 ] && echo "  ! warning: no skills found under $REPO/skills/*/SKILL.md"
 
 # --- 2. hook scripts executable ---------------------------------------------
 chmod +x "$REPO/hooks/session-start" "$REPO/hooks/lsp-doctor"

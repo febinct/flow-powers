@@ -119,7 +119,8 @@ build work.
 
 ```
 flow-powers/
-├── skills/flow-powers/SKILL.md   the orchestration protocol (the heart)
+├── skills/                       one dir per skill (each with a SKILL.md)
+│   └── flow-powers/SKILL.md      the orchestration protocol (the heart)
 ├── hooks/hooks.json              SessionStart registration
 ├── hooks/session-start           injects the flow-powers pointer (+ LSP warning)
 ├── hooks/lsp-doctor              checks each enabled LSP's server binary is on PATH
@@ -141,3 +142,15 @@ flow-powers/
 `vendor/` is pinned reference so the glue matches real upstream behaviour; the
 runtime uses your **installed** flow + superpowers. Update reference with
 `git submodule update --remote`.
+
+### Adding a skill
+
+The repo hosts multiple skills. To add one:
+
+1. Create `skills/<name>/SKILL.md` (with `name` + `description` frontmatter).
+2. List it in `.claude-plugin/plugin.json` →
+   `"skills": ["./skills/flow-powers", "./skills/<name>"]`.
+
+That's it — `install.sh` symlinks **every** `skills/*/SKILL.md` automatically (no
+installer edit), and marketplace installs read the `plugin.json` array. Hooks are
+shared at the plugin level, so a new skill doesn't need its own hook.
