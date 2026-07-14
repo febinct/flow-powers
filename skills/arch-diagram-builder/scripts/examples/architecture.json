@@ -1,0 +1,19 @@
+{
+  "type": "architecture",
+  "title": "Web App Architecture",
+  "nodes": [
+    { "id": "client", "label": "Web Client", "cat": "frontend" },
+    { "id": "gw", "label": "API Gateway", "cat": "backend" },
+    { "id": "svc", "label": "Order Service", "cat": "backend" },
+    { "id": "cache", "label": "Redis", "cat": "queue" },
+    { "id": "db", "label": "Postgres", "cat": "database" },
+    { "id": "ai", "label": "OpenAI", "cat": "external" }
+  ],
+  "edges": [
+    { "from": "client", "to": "gw", "label": "HTTPS" },
+    { "from": "gw", "to": "svc" },
+    { "from": "svc", "to": "cache", "kind": "async" },
+    { "from": "svc", "to": "db" },
+    { "from": "svc", "to": "ai", "label": "embeddings" }
+  ]
+}

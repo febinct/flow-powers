@@ -1,0 +1,19 @@
+{
+  "type": "dataflow",
+  "title": "Product Analytics Pipeline",
+  "nodes": [
+    { "id": "app", "label": "App Events", "cat": "frontend" },
+    { "id": "ingest", "label": "Ingest API", "cat": "backend" },
+    { "id": "stream", "label": "Kafka", "cat": "queue" },
+    { "id": "etl", "label": "ETL Job", "cat": "backend" },
+    { "id": "warehouse", "label": "Warehouse", "cat": "database" },
+    { "id": "bi", "label": "Dashboards", "cat": "frontend" }
+  ],
+  "edges": [
+    { "from": "app", "to": "ingest", "label": "events" },
+    { "from": "ingest", "to": "stream", "label": "raw" },
+    { "from": "stream", "to": "etl", "label": "consume" },
+    { "from": "etl", "to": "warehouse", "label": "modeled" },
+    { "from": "warehouse", "to": "bi", "label": "query" }
+  ]
+}

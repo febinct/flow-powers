@@ -1,0 +1,18 @@
+{
+  "type": "lifecycle",
+  "title": "Order Lifecycle",
+  "nodes": [
+    { "id": "created", "label": "Created" },
+    { "id": "paid", "label": "Paid", "cat": "backend" },
+    { "id": "shipped", "label": "Shipped", "cat": "backend" },
+    { "id": "delivered", "label": "Delivered", "cat": "backend" },
+    { "id": "cancelled", "label": "Cancelled", "cat": "security" }
+  ],
+  "edges": [
+    { "from": "created", "to": "paid", "label": "pay", "kind": "happy" },
+    { "from": "paid", "to": "shipped", "label": "fulfil", "kind": "happy" },
+    { "from": "shipped", "to": "delivered", "label": "deliver", "kind": "happy" },
+    { "from": "created", "to": "cancelled", "label": "cancel", "kind": "exception" },
+    { "from": "paid", "to": "cancelled", "label": "refund", "kind": "exception" }
+  ]
+}

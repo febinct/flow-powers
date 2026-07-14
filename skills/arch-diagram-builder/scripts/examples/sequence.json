@@ -1,0 +1,20 @@
+{
+  "type": "sequence",
+  "title": "Cache-Miss Request",
+  "actors": ["client", "api", "cache", "db"],
+  "nodes": [
+    { "id": "client", "label": "Client", "cat": "frontend" },
+    { "id": "api", "label": "API", "cat": "backend" },
+    { "id": "cache", "label": "Redis", "cat": "queue" },
+    { "id": "db", "label": "Postgres", "cat": "database" }
+  ],
+  "edges": [
+    { "from": "client", "to": "api", "label": "GET /order/42" },
+    { "from": "api", "to": "cache", "label": "get 42" },
+    { "from": "cache", "to": "api", "label": "miss", "kind": "exception" },
+    { "from": "api", "to": "db", "label": "SELECT" },
+    { "from": "db", "to": "api", "label": "row" },
+    { "from": "api", "to": "cache", "label": "set 42", "kind": "async" },
+    { "from": "api", "to": "client", "label": "200 OK", "kind": "happy" }
+  ]
+}

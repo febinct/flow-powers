@@ -3,97 +3,113 @@ name: arch-diagram-builder
 description: |
   Turn a plain-English description of a system or process into a polished,
   self-contained HTML diagram — architecture, workflow, sequence, data-flow, or
-  state/lifecycle — with a built-in dark/light theme toggle and one-click export
-  to PNG (copy or download) and dual-theme SVG. Zero dependencies; the output is
-  one shareable HTML file. Use when the user asks for an architecture diagram,
-  system/infra/cloud diagram, technical workflow, approval flow, CI/CD or runbook
-  diagram, API/request sequence diagram, data pipeline / ETL / data-flow map, or
-  a state machine / lifecycle diagram, or says "diagram this", "draw the
-  architecture", "visualize this flow", "make a diagram".
+  state/lifecycle — with deterministic auto-layout, a dark/light theme toggle,
+  and one-click export to PNG/JPEG/WebP (up to 4×) and dual-theme SVG. Zero
+  runtime dependencies; the output is one shareable HTML file. Use when the user
+  asks for an architecture diagram, system/infra/cloud diagram, technical
+  workflow, approval flow, CI/CD or runbook diagram, API/request sequence
+  diagram, data pipeline / ETL / data-flow map, or a state machine / lifecycle
+  diagram, or says "diagram this", "draw the architecture", "visualize this
+  flow", "make a diagram".
 ---
 
 # Arch Diagram Builder
 
-Generate a **self-contained, themeable HTML diagram** from a description. The
-output is a single file (inline SVG + a tiny theming/export runtime, no external
-requests) the user can open, toggle dark/light on, and export as PNG or SVG.
+Describe a system or process as a small **JSON IR**; a deterministic engine
+computes the layout (no hand-placed coordinates), validates it, and renders a
+**self-contained, themeable HTML file** with export built in. Requires `node`
+(≥18) on PATH; zero npm dependencies.
 
-**Announce at start:** "Using the diagram skill — self-contained themeable HTML."
+**Announce at start:** "Using the arch-diagram-builder skill (JSON IR → engine)."
 
-## How it works — you author the SVG, the tool wraps it
+## The workflow
 
-`scripts/build-diagram.mjs` (Node, zero deps) injects your SVG into
-`scripts/template.html`, which supplies the theme toggle, the export menu, and a
-CSS-variable color system. **You never hand-write the chrome** — you write only
-the diagram's SVG body, using the template's semantic classes so both themes
-stay consistent:
-
-| Class | Use for |
-|---|---|
-| `.node` | box/container fill + border |
-| `.node-accent` | a highlighted/primary node (accent fill) |
-| `.label` | text inside a node |
-| `.label-accent` | text inside an accent node |
-| `.muted` | secondary/caption text |
-| `.edge` | connector lines/paths (use with `marker-end` arrowheads) |
-| `.edge-label` | text on a connector |
-
-**Semantic tech categories** — colour a node by *what it is* (consistent across
-the diagram, themed automatically). Put the category on the `<rect>`; keep
-`.label` on the text:
-
-| Class | For components like |
-|---|---|
-| `.cat-frontend` | web/mobile UI, SPA, CDN, gateway edge |
-| `.cat-backend` | services, APIs, workers, functions (`aws.lambda`, app servers) |
-| `.cat-database` | `postgres`, MySQL, Mongo, warehouses |
-| `.cat-cloud` | cloud/infra/platform (`aws.*`, k8s, `github-actions`) |
-| `.cat-security` | auth, IAM, secrets, WAF, PII/trust boundaries |
-| `.cat-queue` | `redis`, Kafka, SQS, message buses, caches |
-| `.cat-external` | third-party / external systems (`openai`, Stripe) — dashed |
-
-Map a component's tech name to the closest category (e.g. `redis` → `.cat-queue`,
-`aws.lambda` → `.cat-backend`). No icon library — category = colour + grouping.
-
-Colors come from CSS variables (`--node`, `--edge`, `--text`, `--accent`, …) that
-the template flips between themes — so **never hard-code hex colors** in the SVG;
-use the classes (or `fill="var(--…)"`). That is what makes one SVG render right
-in both themes and export as a dual-theme (system-following) standalone SVG.
-
-## Workflow
-
-1. **Understand the system/flow.** Identify the nodes (services, steps, actors,
-   stores, states) and the edges (calls, data, transitions) from the user's
-   description. Ask if the structure is ambiguous — don't invent architecture.
-2. **Author the SVG body.** Lay out nodes on a grid; connect with `.edge` paths +
-   an arrowhead `<marker>`. Give the `<svg>` an explicit `viewBox` sized to the
-   content (this drives export dimensions). Keep it clean and readable; group
-   related nodes. Use the semantic classes above.
-3. **Build the file:**
+1. **Understand the system/flow** from the user's description — nodes (services,
+   steps, actors, states, stores) and edges (calls, transitions, messages). Ask
+   if the structure is ambiguous; don't invent architecture.
+2. **Write the IR** to a `.json` file (shape below).
+3. **Validate** (catches bad refs, overlaps, edge-crossings with actionable hints):
    ```bash
-   node scripts/build-diagram.mjs --title "<diagram title>" --svg diagram.svg --out <name>.html
-   # or pipe the SVG on stdin:  … | node scripts/build-diagram.mjs --title "…" --out <name>.html
+   node scripts/diagram.mjs validate diagram.json
    ```
-4. **Report the path** and tell the user: open it, press **T** to toggle theme,
-   **E** to export. Export menu: Copy PNG to clipboard, download PNG / JPEG /
-   WebP (rasterized natively at **up to 4×** — auto-stepped down for very large
-   diagrams to stay under the canvas limit), or a dual-theme **SVG** that follows
-   the reader's system theme (ideal for GitHub READMEs).
-5. **Iterate by request** — "add Redis", "move auth left", "use the accent for
-   the gateway": edit the SVG body and rebuild.
+4. **Render** to a self-contained HTML file:
+   ```bash
+   node scripts/diagram.mjs render diagram.json --out <name>.html [--animate]
+   ```
+5. **Report the path** and tell the user: open it, press **T** theme, **E**
+   export (Copy PNG / PNG·JPEG·WebP up to 4× / dual-theme SVG), **A** animate.
+6. **Iterate** by editing the IR and re-rendering.
 
-## Diagram types (same tool, different layout)
-- **Architecture / infra** — boxes for services/stores, edges for calls; group by tier.
-- **Workflow / process** — steps left→right or top→down; decision diamonds; approval/CI-CD/runbook flows.
-- **Sequence** — actor columns with vertical lifelines; horizontal `.edge` messages top→down.
-- **Data-flow / pipeline** — sources → transforms → sinks; label edges with what flows; mark trust/PII boundaries with a dashed container.
-- **State / lifecycle** — states as nodes, transitions as labeled edges; mark start/end.
+If `validate`/`render` prints ⚠ warnings (overlap, edge crosses a node), fix the
+IR — reorder nodes, or set explicit `row`/`col` (architecture/dataflow/lifecycle)
+or `lane`/`phase` (workflow) — then re-render until clean. Use `--strict` to make
+warnings fail the build.
+
+## The IR
+
+```json
+{
+  "type": "architecture | dataflow | lifecycle | workflow | sequence",
+  "title": "Short title",
+  "animate": false,
+  "nodes": [
+    { "id": "svc", "label": "Order Service", "cat": "backend",
+      "row": 0, "col": 2,            // optional grid (architecture/dataflow/lifecycle)
+      "lane": "Manager", "phase": "Review" }   // workflow only
+  ],
+  "edges": [
+    { "from": "gw", "to": "svc", "label": "HTTPS", "kind": "normal" }
+  ],
+  "lanes": ["Employee", "Manager", "Finance"],   // workflow (optional; else derived)
+  "phases": ["Submit", "Review", "Settle"],       // workflow (optional; else derived)
+  "actors": ["client", "api", "db"]               // sequence order (optional; else node order)
+}
+```
+
+- **`cat`** (semantic tech category → consistent color): `frontend`, `backend`,
+  `database`, `cloud`, `security`, `queue`, `external`. Map a component's tech to
+  the closest one (`redis`→`queue`, `aws.lambda`→`backend`, `postgres`→`database`,
+  `openai`→`external`, auth/PII→`security`). Omit for a neutral node.
+- **`kind`** (edge): `normal`, `async` (dashed), `exception` (red dashed),
+  `happy` (accent, emphasized, animatable).
+- **Layout is automatic.** You usually give only `nodes` + `edges`; the engine
+  ranks and places them. Add `row`/`col` only to override. Workflow needs
+  `lane`+`phase` per node (multiple nodes per cell stack automatically).
+
+## Types → layout
+- **architecture / dataflow / lifecycle** — layered: nodes ranked left→right by
+  dependency (or explicit grid); orthogonal edge routing through column gaps.
+- **workflow** — swimlanes (`lane`) × phases (`phase`) with lane bands + phase
+  headers; happy path emphasized, exceptions red.
+- **sequence** — actor columns with vertical lifelines; edges are ordered
+  messages drawn top→down.
+
+## CLI (`scripts/diagram.mjs`)
+| Command | Does |
+|---|---|
+| `render <ir> --out <html> [--animate] [--strict]` | validate → layout → self-contained HTML |
+| `validate <ir> [--strict]` | schema + layout report (overlaps, crossings) with hints |
+| `inspect <ir>` | print the computed layout JSON (coordinates) — for debugging |
+| `examples --out-dir <dir>` | write one example IR per type (see `scripts/examples/`) |
+| `demo [--out <html>]` | render a bundled example |
+| `doctor` | environment + self-test render |
+
+Start from `scripts/examples/<type>.json` when unsure of the shape; the formal
+contract is `scripts/schemas/diagram.schema.json`.
+
+## Escape hatch — hand-authored SVG
+For a bespoke layout the engine doesn't produce, author the SVG body yourself
+(using the semantic classes `.node`/`.cat-*`/`.label`/`.edge`/`.edge-label`,
+never hard-coded colors) and wrap it:
+```bash
+node scripts/build-diagram.mjs --title "…" --svg diagram.svg --out out.html
+```
 
 ## Guardrails
-- **Never hard-code colors** — use the semantic classes / CSS vars, or the theme
-  toggle and dual-theme SVG export break.
-- **Always set a `viewBox`** on the `<svg>` — export sizing depends on it.
-- **Self-contained only** — no external fonts, scripts, or images in the SVG; the
-  whole value is a single shareable file.
-- **Don't invent architecture** — diagram what the user described; ask when the
-  structure or a relationship is unclear.
+- **Prefer the IR + engine** — deterministic layout beats hand-placed coordinates.
+- **Fix warnings before finishing** — overlaps/crossings mean the IR needs
+  reordering or explicit placement; don't ship a diagram with layout warnings.
+- **Never hard-code colors** (escape hatch) — use `cat`/semantic classes so the
+  theme toggle and dual-theme SVG export work.
+- **Don't invent architecture** — diagram what the user described; ask when a
+  relationship is unclear.

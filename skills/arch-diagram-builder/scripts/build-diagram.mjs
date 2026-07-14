@@ -12,9 +12,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-
-const HERE = dirname(fileURLToPath(import.meta.url));
-const TEMPLATE = join(HERE, 'template.html');
+import { wrapHtml } from './engine.mjs';
 
 function parseArgs(argv) {
   const a = {};
@@ -46,13 +44,7 @@ function main() {
     console.error('error: input does not start with an <svg> element');
     return 1;
   }
-  // ensure the svg is a valid standalone root for export
-  if (!/xmlns=/.test(svg)) svg = svg.replace(/^<svg/i, '<svg xmlns="http://www.w3.org/2000/svg"');
-
-  const tpl = readFileSync(TEMPLATE, 'utf8');
-  const html = tpl
-    .replace(/__TITLE__/g, escapeHtml(title))
-    .replace('__DIAGRAM_SVG__', svg);
+  const html = wrapHtml(svg, title);   // shared wrapper (adds xmlns, injects template)
 
   writeFileSync(args.out, html);
   console.error(`wrote: ${args.out} (${(Buffer.byteLength(html) / 1024).toFixed(1)} KB, self-contained)`);

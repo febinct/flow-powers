@@ -226,6 +226,46 @@ else
   no "Y build-diagram (missing script or node)"
 fi
 
+echo "== diagram engine (golden renders, all 5 types) =="
+DG="$REPO/skills/arch-diagram-builder/scripts/diagram.mjs"
+EXD="$REPO/skills/arch-diagram-builder/scripts/examples"
+if [ -f "$DG" ] && command -v node >/dev/null 2>&1; then
+  GG="$TMP/gold"; mkdir -p "$GG"
+  # Z1 doctor passes
+  node "$DG" doctor >/dev/null 2>&1 && ok "Z1 doctor passes" || no "Z1 doctor"
+  # Z2 all 5 example IRs validate with ZERO warnings (--strict)
+  allclean=1; for t in architecture dataflow lifecycle workflow sequence; do
+    node "$DG" validate "$EXD/$t.json" --strict >/dev/null 2>&1 || { allclean=0; echo "        $t not strict-clean"; }; done
+  [ "$allclean" = 1 ] && ok "Z2 all 5 examples strict-clean (no overlap/crossing)" || no "Z2 strict-clean"
+  # Z3 render each → self-contained HTML with an <svg> and no leftover placeholders
+  z3=1; for t in architecture dataflow lifecycle workflow sequence; do
+    node "$DG" render "$EXD/$t.json" --out "$GG/$t.html" >/dev/null 2>&1
+    { [ -f "$GG/$t.html" ] && grep -q '<svg' "$GG/$t.html" && ! grep -q '__DIAGRAM_SVG__\|__TITLE__' "$GG/$t.html" \
+      && ! grep -qiE 'src="https?:|<link[^>]+https?:' "$GG/$t.html"; } || { z3=0; echo "        $t render bad"; }; done
+  [ "$z3" = 1 ] && ok "Z3 all 5 render self-contained with svg" || no "Z3 render"
+  # Z4 workflow emits swimlanes + phase headers; sequence emits lifelines
+  grep -q 'class="lane' "$GG/workflow.html" && grep -q 'phase-label' "$GG/workflow.html" && ok "Z4 workflow lanes + phase headers" || no "Z4 workflow decos"
+  grep -q 'class="lifeline"' "$GG/sequence.html" && ok "Z4b sequence lifelines" || no "Z4b lifelines"
+  # Z5 validation catches a bad edge ref
+  printf '{"type":"architecture","title":"x","nodes":[{"id":"a","label":"A"}],"edges":[{"from":"a","to":"ghost"}]}' > "$GG/bad.json"
+  node "$DG" validate "$GG/bad.json" >/dev/null 2>&1 && no "Z5 catches bad edge ref" || ok "Z5 catches bad edge ref"
+  # Z6 validation catches an overlap (two nodes forced to same grid cell)
+  printf '{"type":"architecture","title":"x","nodes":[{"id":"a","label":"A","row":0,"col":0},{"id":"b","label":"B","row":0,"col":0}]}' > "$GG/ov.json"
+  node "$DG" validate "$GG/ov.json" 2>&1 | grep -qi overlap && ok "Z6 catches overlap" || no "Z6 overlap"
+  # Z7 inspect emits computed coordinates as JSON
+  node "$DG" inspect "$EXD/architecture.json" 2>/dev/null | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["width"]>0 and len(d["nodes"])==6; print("ok")' >/dev/null 2>&1 \
+    && ok "Z7 inspect emits layout JSON" || no "Z7 inspect"
+  # Z8 --animate marks edges + enables animation hook
+  node "$DG" render "$EXD/lifecycle.json" --out "$GG/anim.html" --animate >/dev/null 2>&1
+  grep -q 'data-animate="on"' "$GG/anim.html" && grep -q 'edge-flow' "$GG/anim.html" && ok "Z8 --animate wires flow animation" || no "Z8 animate"
+  # Z9 JSON Schema is valid JSON and the type enum matches the engine's TYPES
+  SCH="$REPO/skills/arch-diagram-builder/scripts/schemas/diagram.schema.json"
+  python3 -c "import json; s=json.load(open('$SCH')); assert set(s['properties']['type']['enum'])=={'architecture','dataflow','lifecycle','workflow','sequence'}; print('ok')" >/dev/null 2>&1 \
+    && ok "Z9 JSON Schema valid + type enum matches engine" || no "Z9 schema"
+else
+  no "Z diagram engine (missing script or node)"
+fi
+
 echo "== skill + plugin manifests =="
 # U. both skills present with matching name frontmatter
 for pair in "flow-powers:flow-powers" "duckdb-analysis:duckdb-analysis" "arch-diagram-builder:arch-diagram-builder"; do

@@ -1,0 +1,19 @@
+{
+  "type": "workflow",
+  "title": "Expense Approval",
+  "lanes": ["Employee", "Manager", "Finance"],
+  "phases": ["Submit", "Review", "Settle"],
+  "nodes": [
+    { "id": "submit", "label": "Submit claim", "lane": "Employee", "phase": "Submit", "cat": "frontend" },
+    { "id": "review", "label": "Review", "lane": "Manager", "phase": "Review", "cat": "backend" },
+    { "id": "reject", "label": "Reject", "lane": "Manager", "phase": "Review", "cat": "security" },
+    { "id": "approve", "label": "Approve", "lane": "Finance", "phase": "Settle", "cat": "backend" },
+    { "id": "pay", "label": "Reimburse", "lane": "Finance", "phase": "Settle", "cat": "backend" }
+  ],
+  "edges": [
+    { "from": "submit", "to": "review", "kind": "happy" },
+    { "from": "review", "to": "approve", "label": "ok", "kind": "happy" },
+    { "from": "approve", "to": "pay", "kind": "happy" },
+    { "from": "review", "to": "reject", "label": "over budget", "kind": "exception" }
+  ]
+}

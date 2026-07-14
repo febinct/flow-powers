@@ -64,24 +64,45 @@
   .cat-security { fill:rgba(244,63,94,.14);   stroke:#f43f5e; stroke-width:1.5; }
   .cat-queue    { fill:rgba(251,146,60,.16);  stroke:#fb923c; stroke-width:1.5; }
   .cat-external { fill:rgba(148,163,184,.16); stroke:#94a3b8; stroke-width:1.5; stroke-dasharray:5 4; }
+  /* engine decorations: swimlanes, phase headers, sequence lifelines, edge kinds */
+  .lane { fill:transparent; } .lane-alt { fill:rgba(128,128,128,.06); }
+  .lane-label { fill:var(--muted); font-family:inherit; font-size:12px; font-weight:600; }
+  .phase-label { fill:var(--muted); font-family:inherit; font-size:12px; font-weight:600; letter-spacing:.02em; }
+  .lifeline { stroke:var(--border); stroke-width:1.25; stroke-dasharray:4 4; }
+  .edge-happy { stroke:var(--accent); stroke-width:2.25; }
+  .edge-exception { stroke:#f43f5e; stroke-width:1.75; stroke-dasharray:6 4; }
   .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
     background:var(--accent); color:var(--accent-text); padding:9px 16px; border-radius:20px;
     font-size:13px; opacity:0; transition:opacity .2s; pointer-events:none; }
   .toast.show { opacity:1; }
+  /* focus visibility for keyboard users */
+  .btn:focus-visible, .menu-list button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  /* opt-in trace animation: enabled when the <svg> carries data-animate="on" */
+  svg[data-animate="on"] .edge-flow { stroke-dasharray:6 6; animation:flow 1s linear infinite; }
+  @keyframes flow { to { stroke-dashoffset:-12; } }
+  @media (prefers-reduced-motion: reduce) { svg[data-animate="on"] .edge-flow { animation:none; } }
+  /* print: drop the chrome, let the diagram fill the page */
+  @media print {
+    .bar, .toast { display:none !important; }
+    body { background:#fff; color:#000; }
+    #stage { padding:0; }
+    #stage svg { max-width:100%; }
+  }
 </style>
 </head>
 <body>
-  <div class="bar">
+  <div class="bar" role="toolbar" aria-label="Diagram controls">
     <h1>__TITLE__</h1>
-    <button class="btn" id="themeBtn" title="Toggle theme (T)">◐ Theme</button>
+    <button class="btn" id="animateBtn" title="Toggle flow animation (A)" aria-pressed="false" hidden>▶ Animate</button>
+    <button class="btn" id="themeBtn" title="Toggle theme (T)" aria-label="Toggle dark/light theme">◐ Theme</button>
     <div class="menu">
-      <button class="btn" id="exportBtn" aria-haspopup="true">Export ▾</button>
-      <div class="menu-list" id="exportMenu" hidden>
-        <button data-act="copy">Copy PNG to clipboard</button>
-        <button data-act="png">Download PNG (up to 4×)</button>
-        <button data-act="jpeg">Download JPEG (up to 4×)</button>
-        <button data-act="webp">Download WebP (up to 4×)</button>
-        <button data-act="svg">Download SVG (dual-theme)</button>
+      <button class="btn" id="exportBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="exportMenu">Export ▾</button>
+      <div class="menu-list" id="exportMenu" role="menu" aria-label="Export format" hidden>
+        <button role="menuitem" data-act="copy">Copy PNG to clipboard</button>
+        <button role="menuitem" data-act="png">Download PNG (up to 4×)</button>
+        <button role="menuitem" data-act="jpeg">Download JPEG (up to 4×)</button>
+        <button role="menuitem" data-act="webp">Download WebP (up to 4×)</button>
+        <button role="menuitem" data-act="svg">Download SVG (dual-theme)</button>
       </div>
     </div>
   </div>
@@ -103,11 +124,24 @@ __DIAGRAM_SVG__
   const setTheme = (t) => { root.setAttribute('data-theme', t); localStorage.setItem('diagram-theme', t); };
   document.getElementById('themeBtn').onclick = () => setTheme(curTheme() === 'dark' ? 'light' : 'dark');
 
+  // --- animate toggle (only shown when the diagram has animatable edges) ---
+  const animateBtn = document.getElementById('animateBtn');
+  if (svg && svg.querySelector('.edge-flow')) {
+    animateBtn.hidden = false;
+    animateBtn.onclick = () => {
+      const on = svg.getAttribute('data-animate') === 'on';
+      svg.setAttribute('data-animate', on ? 'off' : 'on');
+      animateBtn.setAttribute('aria-pressed', String(!on));
+    };
+  }
+
   // --- export menu ---
   const menu = document.getElementById('exportMenu');
-  document.getElementById('exportBtn').onclick = (e) => { e.stopPropagation(); menu.hidden = !menu.hidden; };
-  document.addEventListener('click', () => { menu.hidden = true; });
-  menu.addEventListener('click', (e) => { const a = e.target.getAttribute('data-act'); if (a) doExport(a); menu.hidden = true; });
+  const exportBtn = document.getElementById('exportBtn');
+  const setMenu = (open) => { menu.hidden = !open; exportBtn.setAttribute('aria-expanded', String(open)); };
+  exportBtn.onclick = (e) => { e.stopPropagation(); setMenu(menu.hidden); };
+  document.addEventListener('click', () => setMenu(false));
+  menu.addEventListener('click', (e) => { const a = e.target.getAttribute('data-act'); if (a) doExport(a); setMenu(false); });
 
   // read concrete values of the theme vars for a given theme
   function varsFor(theme) {
@@ -136,7 +170,10 @@ __DIAGRAM_SVG__
         +  `.cat-frontend{fill:rgba(34,211,238,.14);stroke:#22d3ee;stroke-width:1.5}.cat-backend{fill:rgba(52,211,153,.14);stroke:#34d399;stroke-width:1.5}`
         +  `.cat-database{fill:rgba(167,139,250,.16);stroke:#a78bfa;stroke-width:1.5}.cat-cloud{fill:rgba(251,191,36,.14);stroke:#fbbf24;stroke-width:1.5}`
         +  `.cat-security{fill:rgba(244,63,94,.14);stroke:#f43f5e;stroke-width:1.5}.cat-queue{fill:rgba(251,146,60,.16);stroke:#fb923c;stroke-width:1.5}`
-        +  `.cat-external{fill:rgba(148,163,184,.16);stroke:#94a3b8;stroke-width:1.5;stroke-dasharray:5 4}`;
+        +  `.cat-external{fill:rgba(148,163,184,.16);stroke:#94a3b8;stroke-width:1.5;stroke-dasharray:5 4}`
+        +  `.lane{fill:transparent}.lane-alt{fill:rgba(128,128,128,.06)}.lane-label{fill:var(--muted);font-family:sans-serif;font-size:12px;font-weight:600}`
+        +  `.phase-label{fill:var(--muted);font-family:sans-serif;font-size:12px;font-weight:600}.lifeline{stroke:var(--border);stroke-width:1.25;stroke-dasharray:4 4}`
+        +  `.edge-happy{stroke:var(--accent);stroke-width:2.25}.edge-exception{stroke:#f43f5e;stroke-width:1.75;stroke-dasharray:6 4}`;
     const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
     style.textContent = css;
     clone.insertBefore(style, clone.firstChild);
@@ -185,6 +222,7 @@ __DIAGRAM_SVG__
     if (e.target.tagName === 'INPUT') return;
     if (e.key.toLowerCase() === 't') document.getElementById('themeBtn').click();
     if (e.key.toLowerCase() === 'e') document.getElementById('exportBtn').click();
+    if (e.key.toLowerCase() === 'a' && !animateBtn.hidden) animateBtn.click();
   });
 })();
 </script>

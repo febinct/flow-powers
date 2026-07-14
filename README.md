@@ -141,7 +141,8 @@ flow-powers/
 │   │   └── scripts/duckdb_tool.py
 │   └── arch-diagram-builder/     English → self-contained themeable HTML diagram
 │       ├── SKILL.md
-│       └── scripts/{build-diagram.mjs, template.html}
+│       └── scripts/             engine.mjs (layout+validate+render), diagram.mjs
+│                                (CLI), build-diagram.mjs, template.html, examples/
 ├── hooks/hooks.json              SessionStart registration
 ├── hooks/session-start           injects the flow-powers pointer (+ LSP warning)
 ├── hooks/lsp-doctor              checks each enabled LSP's server binary is on PATH
@@ -175,9 +176,13 @@ with `git submodule update --remote`.
   "keep data out of the window" discipline. Requires `uv` on PATH.
 - **`arch-diagram-builder`** — turn a plain-English description into a
   self-contained, themeable HTML diagram (architecture / workflow / sequence /
-  data-flow / state) via a bundled Node tool (`scripts/build-diagram.mjs`, zero
-  deps). Dark/light toggle, semantic tech categories, and export to PNG / JPEG /
-  WebP (native up to 4×) or a dual-theme SVG. Requires `node` on PATH.
+  data-flow / state). A bundled zero-dep engine (`scripts/diagram.mjs`) takes a
+  small JSON IR and does **deterministic auto-layout** (ranked placement,
+  swimlanes, orthogonal edge routing), **validation** (bad refs, overlaps,
+  edge-crossings with hints), and rendering. Dark/light toggle, semantic tech
+  categories, opt-in flow animation, and export to PNG / JPEG / WebP (native up
+  to 4×) or a dual-theme SVG. CLI: `render / validate / inspect / examples /
+  demo / doctor`. Requires `node` (≥18) on PATH.
 
 ### Adding a skill
 
