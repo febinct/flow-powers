@@ -197,4 +197,4 @@ manifests, and submodules. Runs on every push/PR via
 
 **Deeper docs:** [`docs/HOW-IT-WORKS.md`](docs/HOW-IT-WORKS.md) (each tool on its
 own) · [`docs/DESIGN.md`](docs/DESIGN.md) (seam-by-seam integration) ·
-[`blog.md`](blog.md) (why chain these).
+[`blog.md`](blog.md) (the writeup — why I built this).

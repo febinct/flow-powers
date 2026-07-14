@@ -1,123 +1,88 @@
-# flow-powers: giving a coding agent both a memory and a spine
+# I rebuilt my local Claude Code setup so it stops forgetting everything
 
-Every Claude Code session starts as a brilliant new hire with amnesia. It can
-reason about your code, but it doesn't remember yesterday — not the decision you
-made, not the convention you agreed on, not the half-finished thread you left
-open. And left to its own devices, it tends to sprint straight to code instead
-of thinking first.
+Every Claude Code session starts like a brilliant new hire with amnesia.
 
-Two different problems. It turns out two existing tools each solve one of them —
-and chaining them produces something neither has alone.
+Sharp reasoning, zero memory. It doesn't remember yesterday's decision, the
+convention we agreed on, or the half-finished thread I left open. So every
+morning I'd re-explain my own codebase to it. And left alone, it sprints
+straight to code instead of thinking first.
 
-## Two tools, two natures
+I got tired of that. So I spent a weekend rebuilding my local setup around one
+idea: **a build should make the next build smarter, not start from zero.**
 
-**[flow](https://github.com/Facets-cloud/flow)** is memory. A small Go CLI that
-tracks your work as tasks with briefs and progress notes, binds a Claude session
-to a task, and — the part that matters — when you close a task with `flow done`,
-it sweeps the whole session transcript and distills durable facts into a
-knowledge base that **auto-injects into every future session.** Session #50
-starts already knowing your codebase, your team, your conventions.
+Here's what I landed on.
 
-**[superpowers](https://github.com/obra/superpowers)** is discipline. A Claude
-Code plugin that forces the agent through a real methodology — brainstorm the
-spec, write a plan, build it test-first with subagent review, verify before
-claiming done. The output quality is higher than one-shot prompting. But it
-forgets everything at session end.
+## The core: memory + discipline, chained
 
-Neither is missing a *step*. They're missing each other's *nature*. superpowers
-is a disciplined amnesiac; flow is memory with no opinion on execution.
+Two open-source tools, each doing one thing well:
 
-## The flywheel
+- **flow** — memory. A tiny CLI that tracks work as tasks, binds a Claude
+  session to one, and — the part that matters — when I close a task it sweeps the
+  whole transcript into a knowledge base that auto-injects into every future
+  session.
+- **superpowers** — discipline. It forces a real methodology: brainstorm the
+  spec, write a plan, build test-first with review, verify before claiming done.
+  Great output. Then it forgets everything at session end.
 
-Chain them and you get a loop that compounds:
+Neither is missing a *step*. They're missing each other's *nature*. So I chained
+them into one loop I call **flow-powers**: flow's memory feeds superpowers'
+discipline, and each disciplined build feeds flow's memory back. The knowledge
+base gets richer, so the next brainstorm starts warm instead of cold. That
+compounding is the whole point.
 
-```
-   flow KB (auto-injected)  ──►  superpowers brainstorm starts WARM
-            ▲                                   │
-            │                                   ▼
-   flow done sweeps the           plan → subagent-reviewed gated build
-   transcript into the KB   ◄──   → finish
-```
+## The stack around it
 
-Every disciplined build permanently upgrades the "team member." The KB gets
-richer, so the next brainstorm is sharper, so the next build is better, so the
-KB it produces is richer still. That compounding — not any single pass — is the
-product.
+A loop is only as good as what it can see and hold, so I wired in three more:
 
-flow-powers is deliberately thin. superpowers owns the **HOW** end to end;
-flow-powers never micromanages its phases. flow touches only four edges:
+- **context-mode** — keeps huge tool output (test runs, logs, greps) out of the
+  conversation, so long sessions don't drown in their own noise.
+- **LSP servers** (gopls, pyright, vtsls, jdtls) — real go-to-definition and
+  diagnostics, so edits are made with actual code knowledge, not guesses.
+- **Playwright MCP** — lets the agent open the running app in a browser and
+  *look* at a UI change instead of assuming it works.
 
-1. **Bind** the session to a task (`flow do --here`) — warm start, brief + KB injected.
-2. **Build** — hand off to superpowers and get out of the way.
-3. **Trail** — drop a one-line progress note at each phase gate.
-4. **Close** (`flow done`) — sweep the transcript into the KB. Next build starts smarter.
+One installer sets all of it up.
 
-One rule keeps it honest: the plan doc is canonical for *how*, the flow brief is
-canonical for *why + status*. Never duplicate one into the other.
+## Then I started building my own skills
 
-## Making the loop lean and sighted
+Once the loop worked, adding capabilities got addictive:
 
-Two ambient boosters make the loop practical, not just elegant:
+- **duckdb-analysis** — point it at a CSV / Parquet / Excel file and it runs SQL
+  in-process, returning only the answer. The raw rows never touch the context
+  window.
+- **arch-diagram-builder** — describe a system in plain English, get a
+  self-contained HTML architecture diagram with a dark/light toggle and one-click
+  export. It has a real layout engine and validation, not just an LLM guessing
+  coordinates. The fun part: I had it draw *its own repo's* architecture, and
+  those diagrams now live in the README.
 
-- **[context-mode](https://github.com/mksglu/context-mode)** keeps the session
-  *lean*. A gated build emits a firehose of output — test runs, greps, logs. Left
-  raw, that output eats the context window and cuts the session short. context-mode
-  runs the work in a sandbox and returns only the derived answer, so a long build
-  gets further before hitting the ceiling. It even indexes session memory that
-  survives `/clear`, so a resumed session can recover what it was doing.
-- **LSP parsers** ([claude-code-lsps](https://github.com/Piebald-AI/claude-code-lsps))
-  make edits *sighted*. Real Language Server Protocol servers — gopls, pyright,
-  vtsls, jdtls — give the agent go-to-definition, references, and diagnostics, so
-  superpowers edits against real symbol knowledge and catches type errors
-  immediately instead of at test time.
-- **[Playwright MCP](https://github.com/microsoft/playwright-mcp)** makes
-  frontend verification *real*. For a UI change, passing unit tests proves
-  nothing about whether the thing renders. The MCP is agent browser control — not
-  a test runner — so the agent drives the running app (navigate, click, snapshot,
-  screenshot) and the verification gate points at an actual rendered result.
-  Without it, "the UI works" is an assumption; with it, it's evidence.
+## The honest lessons (this is the real post)
 
-## The honest caveat
+Building it taught me more than using it:
 
-The flywheel only turns if you **close tasks.** The entire compounding benefit
-lives in the `flow done` sweep. If tasks pile up `in-progress` for weeks and
-never close, the sweep never runs, the KB never grows, and you're paying the
-ceremony cost with none of the payoff. This is the failure mode to watch for in
-yourself: having the machinery is not the same as turning the flywheel.
+**Silent failures cost the most.** My SessionStart hook — the thing that's
+supposed to load the whole system — was quietly doing nothing for a while. It
+branched on the wrong environment variable, so Claude Code just ignored its
+output. No error. A hook that "runs fine" and a hook whose output is actually
+*used* are two different claims. Test the second one.
 
-And it isn't free. Two external dependencies, a plan-and-gate rhythm that's
-overkill for a one-line fix, and overlap with Claude Code's now-native plan mode,
-todos, and memory. flow-powers earns its keep when you do multi-session work
-worth remembering *and* you actually close the loop. For quick one-offs, plain
-Claude Code plus a good `CLAUDE.md` gets you most of the way with none of the
-overhead.
+**"It broke" is usually "it was never wired."** Resume looked broken in Go repos
+— turned out `gopls` had installed to a directory that wasn't on the PATH Claude
+Code inherits. The tool was declared, the binary just wasn't reachable. Now a
+doctor script surfaces that instead of letting it hide.
 
-## Two lessons from building the stack
+**The compounding only works if you actually close things.** The entire payoff
+lives in the "close the task" sweep. Half-finished tasks that never close teach
+the system nothing. The machinery isn't the habit — closing the loop is.
 
-**Silent failures are the expensive ones.** The SessionStart hook that injects
-the flow-powers pointer was, for a while, doing nothing under Claude Code. It
-branched on `CLAUDE_PLUGIN_ROOT` to pick its output format — a variable Claude
-Code sets only for *plugin* hooks. flow-powers installs a *user-settings* hook,
-where that variable is unset, so it emitted the SDK-standard shape that Claude
-Code ignores. No error, no warning — the context just evaporated. The fix was to
-key on `CLAUDECODE` instead. Lesson: a hook that "runs fine" and a hook whose
-output is actually *consumed* are different claims. Test the second one.
+## Would I recommend it?
 
-**Declaring a capability isn't having it.** An LSP plugin only declares *how* to
-launch a server; the server binary must be installed separately and on PATH. Miss
-that — `gopls` installed to `~/go/bin`, which wasn't on the PATH Claude Code
-inherited — and the LSP silently does nothing. It *looks* like "resume broke."
-That's why the stack ships `hooks/lsp-doctor`: it checks every enabled LSP's
-binary and, when one is missing, the session-start hook surfaces a warning
-instead of letting the failure hide. Make the invisible failure visible.
+If you do multi-session work worth remembering *and* you'll actually close your
+tasks — yes, it changes how the tool feels by session #50. If you mostly do
+quick one-offs, a good `CLAUDE.md` gets you most of the way with none of the
+overhead. Be honest about which one you are.
 
-## Try it
+It's all open source and tested in CI. Happy to share the repo if it's useful to
+anyone building out their own agent setup.
 
-```bash
-git clone --recurse-submodules <this-repo> && cd flow-powers
-./install.sh
-```
-
-Then restart Claude Code, start real build work, and — the part that matters —
-close your tasks. See [`README.md`](README.md) for setup and
-[`docs/HOW-IT-WORKS.md`](docs/HOW-IT-WORKS.md) for how each piece works.
+*#ClaudeCode #AI #DeveloperTools #Engineering #LLM #Productivity*
