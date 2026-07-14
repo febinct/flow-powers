@@ -53,6 +53,25 @@ phases. flow touches only the **edges**:
 > forward automatically via the sweep — no manual step. Recurring build shapes →
 > save a **flow playbook** to replay the recipe.
 
+## Architecture (dogfooded)
+
+Every diagram below is drawn by this repo's own **`arch-diagram-builder`** skill
+from a small JSON IR (`docs/diagrams/src/*.json`) — dual-theme SVGs that follow
+your GitHub color scheme. Regenerate with
+`node skills/arch-diagram-builder/scripts/diagram.mjs svg <ir> --out <svg>`.
+
+**flow-powers — the compounding loop**
+
+![flow-powers architecture](docs/diagrams/flow-powers.svg)
+
+**duckdb-analysis — query data, keep it out of context**
+
+![duckdb-analysis architecture](docs/diagrams/duckdb-analysis.svg)
+
+**arch-diagram-builder — IR → self-contained HTML**
+
+![arch-diagram-builder architecture](docs/diagrams/arch-diagram-builder.svg)
+
 ## Ambient stack (best-effort amplifiers the installer wires in)
 
 Three capabilities the loop assumes are present — it runs without them, just

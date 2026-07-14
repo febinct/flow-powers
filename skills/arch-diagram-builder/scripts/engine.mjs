@@ -295,6 +295,32 @@ export function render(ir, lay) {
   return parts.join('\n');
 }
 
+// ---------------------------------------------------------------- standalone dual-theme SVG
+// Emits an SVG that follows the reader's prefers-color-scheme — ideal for GitHub
+// READMEs. Mirrors the browser export's standaloneSVG(dualTheme:true).
+const LIGHT_VARS = { '--bg': '#ffffff', '--panel': '#f6f8fa', '--border': '#d0d7de', '--text': '#1f2328', '--muted': '#656d76', '--node': '#eef2ff', '--node-border': '#c7d2fe', '--node-text': '#312e81', '--edge': '#8b95a5', '--accent': '#4f46e5', '--accent-text': '#ffffff' };
+const DARK_VARS = { '--bg': '#0b1020', '--panel': '#131a2e', '--border': '#2a3550', '--text': '#e6edf3', '--muted': '#9aa7b8', '--node': '#1e2740', '--node-border': '#3a496b', '--node-text': '#dbe4ff', '--edge': '#5b6a86', '--accent': '#818cf8', '--accent-text': '#0b1020' };
+const SVG_CSS = '.node{fill:var(--node);stroke:var(--node-border);stroke-width:1.5}.node-accent{fill:var(--accent);stroke:var(--accent)}'
+  + '.label{fill:var(--node-text);font-family:sans-serif;font-size:14px}.label-accent{fill:var(--accent-text);font-family:sans-serif;font-size:14px}'
+  + '.muted{fill:var(--muted);font-family:sans-serif;font-size:12px}.edge{stroke:var(--edge);stroke-width:1.75;fill:none}'
+  + '.edge-label{fill:var(--muted);font-family:sans-serif;font-size:11px}'
+  + '.cat-frontend{fill:rgba(34,211,238,.14);stroke:#22d3ee;stroke-width:1.5}.cat-backend{fill:rgba(52,211,153,.14);stroke:#34d399;stroke-width:1.5}'
+  + '.cat-database{fill:rgba(167,139,250,.16);stroke:#a78bfa;stroke-width:1.5}.cat-cloud{fill:rgba(251,191,36,.14);stroke:#fbbf24;stroke-width:1.5}'
+  + '.cat-security{fill:rgba(244,63,94,.14);stroke:#f43f5e;stroke-width:1.5}.cat-queue{fill:rgba(251,146,60,.16);stroke:#fb923c;stroke-width:1.5}'
+  + '.cat-external{fill:rgba(148,163,184,.16);stroke:#94a3b8;stroke-width:1.5;stroke-dasharray:5 4}'
+  + '.lane{fill:transparent}.lane-alt{fill:rgba(128,128,128,.06)}.lane-exception{fill:rgba(244,63,94,.06)}'
+  + '.lane-label{fill:var(--muted);font-family:sans-serif;font-size:12px;font-weight:600}.phase-label{fill:var(--muted);font-family:sans-serif;font-size:12px;font-weight:600}'
+  + '.lifeline{stroke:var(--border);stroke-width:1.25;stroke-dasharray:4 4}.edge-happy{stroke:var(--accent);stroke-width:2.25}.edge-exception{stroke:#f43f5e;stroke-width:1.75;stroke-dasharray:6 4}';
+
+export function standaloneSvg(ir, lay) {
+  const decl = o => Object.entries(o).map(([k, v]) => `${k}:${v}`).join(';');
+  const style = `<style>:root{${decl(LIGHT_VARS)};background:var(--bg)}@media(prefers-color-scheme:dark){:root{${decl(DARK_VARS)}}}${SVG_CSS}</style>`;
+  const svg = render(ir, lay);
+  // add a background rect so the SVG isn't transparent when embedded
+  const bg = `<rect x="0" y="0" width="100%" height="100%" fill="var(--bg)"/>`;
+  return svg.replace(/(<svg[^>]*>)/, `$1${style}${bg}`);
+}
+
 // ---------------------------------------------------------------- html wrap (shared with build-diagram.mjs)
 export function wrapHtml(svg, title) {
   const HERE = dirname(fileURLToPath(import.meta.url));

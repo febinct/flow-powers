@@ -1,0 +1,21 @@
+{
+  "type": "architecture",
+  "title": "arch-diagram-builder — IR to self-contained HTML",
+  "nodes": [
+    { "id": "ir", "label": "JSON IR", "cat": "frontend", "row": 0, "col": 0 },
+    { "id": "validate", "label": "validate", "cat": "security", "row": 0, "col": 1 },
+    { "id": "layout", "label": "layout engine", "cat": "backend", "row": 0, "col": 2 },
+    { "id": "render", "label": "render → SVG", "cat": "backend", "row": 0, "col": 3 },
+    { "id": "template", "label": "template.html", "cat": "cloud", "row": 1, "col": 3 },
+    { "id": "html", "label": "self-contained HTML", "cat": "database", "row": 0, "col": 4 },
+    { "id": "export", "label": "PNG/JPEG/WebP/SVG", "cat": "external", "row": 1, "col": 4 }
+  ],
+  "edges": [
+    { "from": "ir", "to": "validate" },
+    { "from": "validate", "to": "layout", "label": "ok", "kind": "happy" },
+    { "from": "layout", "to": "render" },
+    { "from": "template", "to": "html", "label": "wrap" },
+    { "from": "render", "to": "html", "kind": "happy" },
+    { "from": "html", "to": "export", "label": "in-browser" }
+  ]
+}

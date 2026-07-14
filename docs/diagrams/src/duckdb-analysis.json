@@ -1,0 +1,17 @@
+{
+  "type": "dataflow",
+  "title": "duckdb-analysis — query data, keep it out of context",
+  "nodes": [
+    { "id": "files", "label": "Data files (CSV/Parquet/Excel)", "cat": "database" },
+    { "id": "tool", "label": "duckdb_tool.py (uv)", "cat": "backend" },
+    { "id": "duck", "label": "DuckDB (SQL, in-process)", "cat": "queue" },
+    { "id": "result", "label": "Derived result", "cat": "frontend" },
+    { "id": "ctx", "label": "context-mode sandbox", "cat": "cloud" }
+  ],
+  "edges": [
+    { "from": "files", "to": "tool", "label": "--load" },
+    { "from": "tool", "to": "duck", "label": "SQL" },
+    { "from": "duck", "to": "result", "label": "only the answer", "kind": "happy" },
+    { "from": "tool", "to": "ctx", "label": "raw rows stay here", "kind": "async" }
+  ]
+}

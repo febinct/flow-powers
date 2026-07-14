@@ -280,6 +280,15 @@ if [ -f "$DG" ] && command -v node >/dev/null 2>&1; then
   printf '{"type":"architecture","title":"x","nodes":[{"id":"a","label":"A","row":0,"col":0},{"id":"b","label":"B","row":1,"col":1}],"edges":[{"from":"a","to":"b","fromSide":"bottom","toSide":"left"}]}' > "$GG/side.json"
   node "$DG" render "$GG/side.json" --out "$GG/side.html" >/dev/null 2>&1 && node "$DG" check "$GG/side.html" >/dev/null 2>&1 \
     && ok "Z14 fromSide/toSide routing renders clean" || no "Z14 side routing"
+  # Z15 `svg` command emits a dual-theme standalone SVG
+  node "$DG" svg "$EXD/architecture.json" --out "$GG/a.svg" >/dev/null 2>&1
+  { grep -q 'prefers-color-scheme' "$GG/a.svg" && grep -q '<svg' "$GG/a.svg" && ! grep -qE '\bNaN\b' "$GG/a.svg"; } \
+    && ok "Z15 svg command → dual-theme standalone SVG" || no "Z15 svg command"
+  # Z16 the dogfooded skill diagrams (docs/diagrams/src) validate strict-clean + committed SVGs exist
+  z16=1; for s in flow-powers duckdb-analysis arch-diagram-builder; do
+    node "$DG" validate "$REPO/docs/diagrams/src/$s.json" --strict >/dev/null 2>&1 || { z16=0; echo "        $s IR not strict-clean"; }
+    [ -f "$REPO/docs/diagrams/$s.svg" ] || { z16=0; echo "        $s.svg missing"; }; done
+  [ "$z16" = 1 ] && ok "Z16 dogfooded skill diagrams valid + committed" || no "Z16 dogfood diagrams"
 else
   no "Z diagram engine (missing script or node)"
 fi

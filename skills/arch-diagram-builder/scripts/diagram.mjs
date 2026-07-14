@@ -11,7 +11,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { validate, layout, layoutReport, render, wrapHtml, parseIR, checkOutput, TYPES } from './engine.mjs';
+import { validate, layout, layoutReport, render, wrapHtml, standaloneSvg, parseIR, checkOutput, TYPES } from './engine.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const EX_DIR = join(HERE, 'examples');
@@ -63,6 +63,14 @@ switch (cmd) {
     if (nErr) { console.error(red(`\nFAIL: ${nErr} error(s), ${nWarn} warning(s)`)); process.exit(1); }
     if (has('--strict') && nWarn) { console.error(red(`\nFAIL (--strict): ${nWarn} warning(s)`)); process.exit(1); }
     console.error(grn(`OK: valid ${ir.type} (${nWarn} warning(s))`));
+    break;
+  }
+  case 'svg': {
+    const ir = loadIR(posArg());
+    const v = validate(ir); if (v.errors.length) { printIssues(v); process.exit(1); }
+    const out = flag('--out'); if (!out) { console.error('error: --out <file.svg> required'); process.exit(2); }
+    writeFileSync(out, standaloneSvg(ir, layout(ir)) + '\n');
+    console.error(grn(`wrote: ${out}`) + ' (standalone dual-theme SVG)');
     break;
   }
   case 'check': {

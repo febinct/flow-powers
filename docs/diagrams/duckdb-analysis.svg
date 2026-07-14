@@ -1,0 +1,37 @@
+<svg viewBox="0 0 1196 242" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="duckdb-analysis — query data, keep it out of context" data-animate="off" font-family="sans-serif"><style>:root{--bg:#ffffff;--panel:#f6f8fa;--border:#d0d7de;--text:#1f2328;--muted:#656d76;--node:#eef2ff;--node-border:#c7d2fe;--node-text:#312e81;--edge:#8b95a5;--accent:#4f46e5;--accent-text:#ffffff;background:var(--bg)}@media(prefers-color-scheme:dark){:root{--bg:#0b1020;--panel:#131a2e;--border:#2a3550;--text:#e6edf3;--muted:#9aa7b8;--node:#1e2740;--node-border:#3a496b;--node-text:#dbe4ff;--edge:#5b6a86;--accent:#818cf8;--accent-text:#0b1020}}.node{fill:var(--node);stroke:var(--node-border);stroke-width:1.5}.node-accent{fill:var(--accent);stroke:var(--accent)}.label{fill:var(--node-text);font-family:sans-serif;font-size:14px}.label-accent{fill:var(--accent-text);font-family:sans-serif;font-size:14px}.muted{fill:var(--muted);font-family:sans-serif;font-size:12px}.edge{stroke:var(--edge);stroke-width:1.75;fill:none}.edge-label{fill:var(--muted);font-family:sans-serif;font-size:11px}.cat-frontend{fill:rgba(34,211,238,.14);stroke:#22d3ee;stroke-width:1.5}.cat-backend{fill:rgba(52,211,153,.14);stroke:#34d399;stroke-width:1.5}.cat-database{fill:rgba(167,139,250,.16);stroke:#a78bfa;stroke-width:1.5}.cat-cloud{fill:rgba(251,191,36,.14);stroke:#fbbf24;stroke-width:1.5}.cat-security{fill:rgba(244,63,94,.14);stroke:#f43f5e;stroke-width:1.5}.cat-queue{fill:rgba(251,146,60,.16);stroke:#fb923c;stroke-width:1.5}.cat-external{fill:rgba(148,163,184,.16);stroke:#94a3b8;stroke-width:1.5;stroke-dasharray:5 4}.lane{fill:transparent}.lane-alt{fill:rgba(128,128,128,.06)}.lane-exception{fill:rgba(244,63,94,.06)}.lane-label{fill:var(--muted);font-family:sans-serif;font-size:12px;font-weight:600}.phase-label{fill:var(--muted);font-family:sans-serif;font-size:12px;font-weight:600}.lifeline{stroke:var(--border);stroke-width:1.25;stroke-dasharray:4 4}.edge-happy{stroke:var(--accent);stroke-width:2.25}.edge-exception{stroke:#f43f5e;stroke-width:1.75;stroke-dasharray:6 4}</style><rect x="0" y="0" width="100%" height="100%" fill="var(--bg)"/>
+<defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--edge)"/></marker>
+    <marker id="arrow-accent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--accent)"/></marker>
+    <marker id="arrow-exc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#f43f5e"/></marker>
+  </defs>
+<path class="edge" d="M330 56 L400 56" fill="none" marker-end="url(#arrow)"/>
+<text x="330" y="50" text-anchor="middle" class="edge-label">--load</text>
+<path class="edge" d="M608 56 L678 56" fill="none" marker-end="url(#arrow)"/>
+<text x="608" y="50" text-anchor="middle" class="edge-label">SQL</text>
+<path class="edge edge-happy edge-flow" d="M927 56 L997 56" fill="none" marker-end="url(#arrow-accent)"/>
+<text x="927" y="50" text-anchor="middle" class="edge-label">only the answer</text>
+<path class="edge" d="M608 56 L643 56 L643 140 L695 140" fill="none" marker-end="url(#arrow)" stroke-dasharray="6 5"/>
+<text x="643" y="50" text-anchor="middle" class="edge-label">raw rows stay here</text>
+<rect x="32" y="32" width="298" height="48" rx="10" class="cat-database"/>
+<text x="181" y="61" text-anchor="middle" class="label">Data files (CSV/Parquet/Excel)</text>
+<rect x="400" y="32" width="208" height="48" rx="10" class="cat-backend"/>
+<text x="504" y="61" text-anchor="middle" class="label">duckdb_tool.py (uv)</text>
+<rect x="678" y="32" width="249" height="48" rx="10" class="cat-queue"/>
+<text x="803" y="61" text-anchor="middle" class="label">DuckDB (SQL, in-process)</text>
+<rect x="997" y="32" width="167" height="48" rx="10" class="cat-frontend"/>
+<text x="1081" y="61" text-anchor="middle" class="label">Derived result</text>
+<rect x="695" y="116" width="216" height="48" rx="10" class="cat-cloud"/>
+<text x="803" y="145" text-anchor="middle" class="label">context-mode sandbox</text>
+<g class="legend" role="list" aria-label="Legend">
+<rect x="32" y="210" width="16" height="16" rx="4" class="cat-database"/>
+<text x="54" y="223" class="edge-label">Database</text>
+<rect x="136" y="210" width="16" height="16" rx="4" class="cat-backend"/>
+<text x="158" y="223" class="edge-label">Backend</text>
+<rect x="233" y="210" width="16" height="16" rx="4" class="cat-queue"/>
+<text x="255" y="223" class="edge-label">Queue/Cache</text>
+<rect x="358" y="210" width="16" height="16" rx="4" class="cat-frontend"/>
+<text x="380" y="223" class="edge-label">Frontend</text>
+<rect x="462" y="210" width="16" height="16" rx="4" class="cat-cloud"/>
+<text x="484" y="223" class="edge-label">Cloud/Infra</text>
+</g>
+</svg>
