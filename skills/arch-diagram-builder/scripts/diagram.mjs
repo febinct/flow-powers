@@ -11,7 +11,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { validate, layout, layoutReport, render, wrapHtml, parseIR, TYPES } from './engine.mjs';
+import { validate, layout, layoutReport, render, wrapHtml, parseIR, checkOutput, TYPES } from './engine.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const EX_DIR = join(HERE, 'examples');
@@ -65,6 +65,13 @@ switch (cmd) {
     console.error(grn(`OK: valid ${ir.type} (${nWarn} warning(s))`));
     break;
   }
+  case 'check': {
+    const path = posArg(); if (!path) { console.error('error: provide a rendered .html file'); process.exit(2); }
+    const { checks, ok } = checkOutput(readFileSync(path, 'utf8'));
+    checks.forEach(c => console.error((c.ok ? grn('  ok ') : red('  ✘  ')) + c.name + (c.detail ? ` — ${c.detail}` : '')));
+    console.error(ok ? grn('\ncheck: rendered output OK') : red('\ncheck: problems found'));
+    process.exit(ok ? 0 : 1);
+  }
   case 'inspect': {
     const ir = loadIR(posArg());
     const v = validate(ir); if (v.errors.length) { printIssues(v); process.exit(1); }
@@ -104,6 +111,7 @@ switch (cmd) {
     console.error(`diagram — deterministic diagram engine\n
   render   <ir.json> --out <file.html> [--animate] [--strict]
   validate <ir.json> [--strict]
+  check    <file.html>                # post-render artifact check
   inspect  <ir.json>
   examples --out-dir <dir>
   demo     [--out <file.html>]

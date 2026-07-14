@@ -36,14 +36,47 @@ computes the layout (no hand-placed coordinates), validates it, and renders a
    ```bash
    node scripts/diagram.mjs render diagram.json --out <name>.html [--animate]
    ```
-5. **Report the path** and tell the user: open it, press **T** theme, **E**
+5. **Check the rendered output** (catches NaN coords, missing svg, broken file):
+   ```bash
+   node scripts/diagram.mjs check <name>.html
+   ```
+6. **Verify in a browser (feedback loop) — do this before reporting done.** See
+   "Visual verification" below. Render → look → fix → repeat until it's right.
+7. **Report the path** and tell the user: open it, press **T** theme, **E**
    export (Copy PNG / PNG·JPEG·WebP up to 4× / dual-theme SVG), **A** animate.
-6. **Iterate** by editing the IR and re-rendering.
+8. **Iterate** on user requests by editing the IR and re-rendering.
 
 If `validate`/`render` prints ⚠ warnings (overlap, edge crosses a node), fix the
 IR — reorder nodes, or set explicit `row`/`col` (architecture/dataflow/lifecycle)
 or `lane`/`phase` (workflow) — then re-render until clean. Use `--strict` to make
 warnings fail the build.
+
+## Visual verification (Playwright MCP feedback loop)
+
+`validate`/`check` prove the file is *structurally* sound; they can't see whether
+the diagram *looks* right (labels clipped, edges overlapping, cramped layout). A
+diagram is a visual artifact — **verify it by looking, not by assuming.** When the
+Playwright MCP (`mcp__playwright__browser_*`) is available, run this loop:
+
+1. **Serve the output** (the MCP blocks the `file:` protocol, so use HTTP):
+   ```bash
+   cd <output-dir> && python3 -m http.server 8765   # run in the background
+   ```
+2. `browser_navigate` to `http://localhost:8765/<name>.html`.
+3. `browser_take_screenshot` — **look at it.** Check: labels fit their boxes,
+   no overlapping nodes/edges, categories read clearly, the layout isn't cramped
+   or lopsided.
+4. `browser_console_messages` (level `error`) — a real error (not the favicon
+   404) means the runtime is broken; fix it.
+5. Optionally click `#themeBtn` and screenshot again to confirm **dark theme**
+   reads well too.
+6. **If anything looks wrong, edit the IR and repeat from render.** Only report
+   done once the screenshot looks right. Stop the server when finished.
+
+This is the same "evidence before done" discipline as flow-powers' frontend
+verification — a rendered screenshot is the evidence a diagram is actually good.
+If the Playwright MCP isn't available, say so and fall back to `check` + a careful
+read of the IR.
 
 ## The IR
 
@@ -89,6 +122,7 @@ warnings fail the build.
 |---|---|
 | `render <ir> --out <html> [--animate] [--strict]` | validate → layout → self-contained HTML |
 | `validate <ir> [--strict]` | schema + layout report (overlaps, crossings) with hints |
+| `check <html>` | post-render artifact check (finite coords, single svg, self-contained) |
 | `inspect <ir>` | print the computed layout JSON (coordinates) — for debugging |
 | `examples --out-dir <dir>` | write one example IR per type (see `scripts/examples/`) |
 | `demo [--out <html>]` | render a bundled example |

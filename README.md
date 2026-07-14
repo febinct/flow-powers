@@ -180,9 +180,11 @@ with `git submodule update --remote`.
   small JSON IR and does **deterministic auto-layout** (ranked placement,
   swimlanes, orthogonal edge routing), **validation** (bad refs, overlaps,
   edge-crossings with hints), and rendering. Dark/light toggle, semantic tech
-  categories, opt-in flow animation, and export to PNG / JPEG / WebP (native up
-  to 4×) or a dual-theme SVG. CLI: `render / validate / inspect / examples /
-  demo / doctor`. Requires `node` (≥18) on PATH.
+  categories, a legend, opt-in flow animation, and export to PNG / JPEG / WebP
+  (native up to 4×) or a dual-theme SVG. CLI: `render / validate / check /
+  inspect / examples / demo / doctor`. The skill also runs a **Playwright-MCP
+  feedback loop** — render, screenshot, look, fix — before reporting done.
+  Requires `node` (≥18) on PATH.
 
 ### Adding a skill
 

@@ -262,6 +262,24 @@ if [ -f "$DG" ] && command -v node >/dev/null 2>&1; then
   SCH="$REPO/skills/arch-diagram-builder/scripts/schemas/diagram.schema.json"
   python3 -c "import json; s=json.load(open('$SCH')); assert set(s['properties']['type']['enum'])=={'architecture','dataflow','lifecycle','workflow','sequence'}; print('ok')" >/dev/null 2>&1 \
     && ok "Z9 JSON Schema valid + type enum matches engine" || no "Z9 schema"
+  # Z10 `check` passes a good render and fails a NaN-corrupted one
+  node "$DG" check "$GG/architecture.html" >/dev/null 2>&1 && ok "Z10 check passes good render" || no "Z10 check good"
+  sed 's/viewBox="0 0 [0-9]* /viewBox="0 0 NaN /' "$GG/architecture.html" > "$GG/nan.html"
+  node "$DG" check "$GG/nan.html" >/dev/null 2>&1 && no "Z10b check catches NaN" || ok "Z10b check catches NaN coords"
+  # Z11 legend emitted for a diagram with categories
+  grep -q 'class="legend"' "$GG/architecture.html" && ok "Z11 legend rendered" || no "Z11 legend"
+  # Z12 CJK-aware width: a 6-CJK-char label is wider than a 3-latin label
+  printf '{"type":"architecture","title":"c","nodes":[{"id":"a","label":"注文サービス"},{"id":"b","label":"api"}],"edges":[{"from":"a","to":"b"}]}' > "$GG/cjk.json"
+  node "$DG" inspect "$GG/cjk.json" 2>/dev/null | python3 -c 'import json,sys; d=json.load(sys.stdin); sys.exit(0 if d["nodes"]["a"]["w"]>d["nodes"]["b"]["w"] else 1)' \
+    && ok "Z12 CJK-aware text width" || no "Z12 CJK width"
+  # Z13 exception lane variant renders lane-exception + EX prefix
+  printf '{"type":"workflow","title":"x","lanes":["U",{"name":"Err","variant":"exception"}],"phases":["A","B"],"nodes":[{"id":"n1","label":"Go","lane":"U","phase":"A"},{"id":"n2","label":"Fail","lane":"Err","phase":"B"}],"edges":[{"from":"n1","to":"n2","kind":"exception"}]}' > "$GG/ex.json"
+  node "$DG" render "$GG/ex.json" --out "$GG/ex.html" >/dev/null 2>&1
+  grep -q 'lane-exception' "$GG/ex.html" && grep -q 'EX · Err' "$GG/ex.html" && ok "Z13 exception lane (EX prefix + tint)" || no "Z13 exception lane"
+  # Z14 fromSide/toSide edge routing renders without error and stays finite
+  printf '{"type":"architecture","title":"x","nodes":[{"id":"a","label":"A","row":0,"col":0},{"id":"b","label":"B","row":1,"col":1}],"edges":[{"from":"a","to":"b","fromSide":"bottom","toSide":"left"}]}' > "$GG/side.json"
+  node "$DG" render "$GG/side.json" --out "$GG/side.html" >/dev/null 2>&1 && node "$DG" check "$GG/side.html" >/dev/null 2>&1 \
+    && ok "Z14 fromSide/toSide routing renders clean" || no "Z14 side routing"
 else
   no "Z diagram engine (missing script or node)"
 fi

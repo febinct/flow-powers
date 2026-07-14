@@ -17,7 +17,15 @@ const CHAR_W = 8.2, PAD_X = 26, MIN_W = 96, NODE_H = 48;
 const GAP_X = 70, GAP_Y = 36, MARGIN = 32, LANE_LABEL_W = 132, PHASE_HEAD_H = 34;
 
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const nodeW = (label) => Math.max(MIN_W, Math.round(label.length * CHAR_W + PAD_X * 2));
+// CJK / full-width glyphs render ~1.8× a Latin char — count them so labels in
+// those scripts don't get clipped by an underestimated box width.
+function charUnits(ch) {
+  const c = ch.codePointAt(0);
+  const wide = (c >= 0x1100 && c <= 0x115f) || (c >= 0x2e80 && c <= 0xa4cf) || (c >= 0xac00 && c <= 0xd7a3)
+    || (c >= 0xf900 && c <= 0xfaff) || (c >= 0xfe30 && c <= 0xfe4f) || (c >= 0xff00 && c <= 0xff60) || (c >= 0xffe0 && c <= 0xffe6);
+  return wide ? 1.8 : 1;
+}
+function nodeW(label) { let u = 0; for (const ch of String(label || '')) u += charUnits(ch); return Math.max(MIN_W, Math.round(u * CHAR_W + PAD_X * 2)); }
 
 // ---------------------------------------------------------------- validation
 export function validate(ir) {
@@ -98,7 +106,10 @@ function layeredLayout(ir) {
 }
 
 function workflowLayout(ir) {
-  const lanes = ir.lanes && ir.lanes.length ? ir.lanes : [...new Set(ir.nodes.map(n => n.lane || 'default'))];
+  // lanes may be strings or { name, variant:"exception" }
+  const laneDefs = (ir.lanes && ir.lanes.length ? ir.lanes : [...new Set(ir.nodes.map(n => n.lane || 'default'))])
+    .map(l => typeof l === 'string' ? { name: l } : l);
+  const lanes = laneDefs.map(l => l.name);
   const phases = ir.phases && ir.phases.length ? ir.phases
     : [...new Set(ir.nodes.map(n => n.phase))].filter(p => p != null).sort((a, b) => a - b);
   const phaseList = phases.length ? phases : [0];
@@ -114,7 +125,7 @@ function workflowLayout(ir) {
   const colX = {}; let x = LANE_LABEL_W; phaseList.forEach((p, pi) => { colX[pi] = x; x += colW[pi] + GAP_X; });
   const width = x - GAP_X + MARGIN, height = y + MARGIN;
   const decorations = [];
-  lanes.forEach((ln, l) => decorations.push({ kind: 'lane', label: ln, x: 0, y: laneY[l], w: width, h: laneH[l], band: l % 2 }));
+  lanes.forEach((ln, l) => decorations.push({ kind: 'lane', label: ln, x: 0, y: laneY[l], w: width, h: laneH[l], band: l % 2, variant: laneDefs[l].variant }));
   phaseList.forEach((p, pi) => { if (phases.length) decorations.push({ kind: 'phase', label: String(p), x: colX[pi], y: 4, w: colW[pi] }); });
   const nodes = {};
   Object.entries(cell).forEach(([k, group]) => {
@@ -151,8 +162,22 @@ export function layout(ir) {
   return layeredLayout(ir); // architecture | dataflow | lifecycle
 }
 
-// orthogonal route between two boxes → list of points
-function route(a, b) {
+const sidePt = (box, side) => {
+  const cx = box.x + box.w / 2, cy = box.y + box.h / 2;
+  return side === 'left' ? { x: box.x, y: cy } : side === 'right' ? { x: box.x + box.w, y: cy }
+    : side === 'top' ? { x: cx, y: box.y } : { x: cx, y: box.y + box.h };
+};
+
+// orthogonal route between two boxes → list of points. `e.fromSide`/`e.toSide`
+// (left|right|top|bottom) override the auto-picked attachment sides.
+function route(a, b, e = {}) {
+  if (e.fromSide || e.toSide) {
+    const fwd = (b.x + b.w / 2) >= (a.x + a.w / 2);
+    const fs = e.fromSide || (fwd ? 'right' : 'left'), ts = e.toSide || (fwd ? 'left' : 'right');
+    const p = sidePt(a, fs), q = sidePt(b, ts), horizFrom = fs === 'left' || fs === 'right';
+    return horizFrom ? [p, { x: (p.x + q.x) / 2, y: p.y }, { x: (p.x + q.x) / 2, y: q.y }, q]
+      : [p, { x: p.x, y: (p.y + q.y) / 2 }, { x: q.x, y: (p.y + q.y) / 2 }, q];
+  }
   const ax = a.x + a.w / 2, ay = a.y + a.h / 2, bx = b.x + b.w / 2, by = b.y + b.h / 2;
   if (Math.abs(ay - by) < a.h) { // same band → horizontal
     const [l, r] = ax < bx ? [a, b] : [b, a];
@@ -186,7 +211,7 @@ export function layoutReport(lay) {
     warnings.push({ msg: `node "${n.id}" is outside the canvas`, hint: 'layout bug or bad explicit row/col' }); });
   if (!lay.sequence) (lay.edges || []).forEach(e => {
     const a = lay.nodes[e.from], b = lay.nodes[e.to]; if (!a || !b) return;
-    const pts = route(a, b);
+    const pts = route(a, b, e);
     for (const n of ns) { if (n.id === e.from || n.id === e.to) continue;
       for (let k = 0; k < pts.length - 1; k++) if (segHitsBox(pts[k], pts[k + 1], n)) {
         warnings.push({ msg: `edge ${e.from}→${e.to} crosses node "${n.id}"`, hint: 'reorder nodes or set explicit row/col' }); break;
@@ -207,10 +232,15 @@ function edgeClass(kind, animate) {
   return (animate || kind === 'happy') ? base + ' edge-flow' : base;
 }
 
+const CAT_LABEL = { frontend: 'Frontend', backend: 'Backend', database: 'Database', cloud: 'Cloud/Infra', security: 'Security', queue: 'Queue/Cache', external: 'External' };
+
 export function render(ir, lay) {
   const animate = !!ir.animate;
+  const catsUsed = [...new Set(Object.values(lay.nodes).map(n => n.cls).filter(c => c.startsWith('cat-')).map(c => c.slice(4)))];
+  const showLegend = ir.legend !== false && catsUsed.length > 0;
+  const legendH = showLegend ? 46 : 0;
   const parts = [];
-  parts.push(`<svg viewBox="0 0 ${Math.ceil(lay.width)} ${Math.ceil(lay.height)}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${esc(ir.title || ir.type + ' diagram')}" data-animate="${animate ? 'on' : 'off'}" font-family="sans-serif">`);
+  parts.push(`<svg viewBox="0 0 ${Math.ceil(lay.width)} ${Math.ceil(lay.height + legendH)}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${esc(ir.title || ir.type + ' diagram')}" data-animate="${animate ? 'on' : 'off'}" font-family="sans-serif">`);
   parts.push(`<defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--edge)"/></marker>
     <marker id="arrow-accent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--accent)"/></marker>
@@ -218,8 +248,11 @@ export function render(ir, lay) {
   </defs>`);
   // decorations first (behind nodes)
   for (const d of lay.decorations || []) {
-    if (d.kind === 'lane') { parts.push(`<rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" class="lane ${d.band ? 'lane-alt' : ''}"/>`);
-      parts.push(`<text x="12" y="${d.y + d.h / 2 + 4}" class="lane-label">${esc(d.label)}</text>`); }
+    if (d.kind === 'lane') {
+      const exc = d.variant === 'exception';
+      parts.push(`<rect x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}" class="lane ${exc ? 'lane-exception' : d.band ? 'lane-alt' : ''}"/>`);
+      parts.push(`<text x="12" y="${d.y + d.h / 2 + 4}" class="lane-label">${exc ? 'EX · ' : ''}${esc(d.label)}</text>`);
+    }
     if (d.kind === 'phase') parts.push(`<text x="${d.x + d.w / 2}" y="${d.y + 18}" text-anchor="middle" class="phase-label">${esc(d.label)}</text>`);
     if (d.kind === 'lifeline') parts.push(`<line x1="${d.x}" y1="${d.y1}" x2="${d.x}" y2="${d.y2}" class="lifeline"/>`);
   }
@@ -235,7 +268,7 @@ export function render(ir, lay) {
   } else {
     for (const e of lay.edges) {
       const a = lay.nodes[e.from], b = lay.nodes[e.to]; if (!a || !b) continue;
-      const pts = route(a, b), d = 'M' + pts.map(p => `${Math.round(p.x)} ${Math.round(p.y)}`).join(' L');
+      const pts = route(a, b, e), d = 'M' + pts.map(p => `${Math.round(p.x)} ${Math.round(p.y)}`).join(' L');
       parts.push(`<path class="${edgeClass(e.kind, animate)}" d="${d}" fill="none" marker-end="url(#${markerFor[e.kind] || 'arrow'})"${e.kind === 'async' ? ' stroke-dasharray="6 5"' : ''}/>`);
       if (e.label) { const m = pts[Math.floor(pts.length / 2) - (pts.length > 2 ? 0 : 0)] || pts[0], m2 = pts[Math.floor((pts.length - 1) / 2)];
         parts.push(`<text x="${Math.round((m2.x))}" y="${Math.round(m2.y) - 6}" text-anchor="middle" class="edge-label">${esc(e.label)}</text>`); }
@@ -245,6 +278,18 @@ export function render(ir, lay) {
   for (const [id, n] of Object.entries(lay.nodes)) {
     parts.push(`<rect x="${Math.round(n.x)}" y="${Math.round(n.y)}" width="${n.w}" height="${n.h}" rx="10" class="${n.cls}"/>`);
     parts.push(`<text x="${Math.round(n.x + n.w / 2)}" y="${Math.round(n.y + n.h / 2 + 5)}" text-anchor="middle" class="label">${esc(n.label)}</text>`);
+  }
+  // legend (category key), laid out left→right along the bottom band
+  if (showLegend) {
+    let lx = MARGIN; const ly = Math.ceil(lay.height) + 14;
+    parts.push(`<g class="legend" role="list" aria-label="Legend">`);
+    for (const cat of catsUsed) {
+      const label = CAT_LABEL[cat] || cat;
+      parts.push(`<rect x="${lx}" y="${ly}" width="16" height="16" rx="4" class="cat-${cat}"/>`);
+      parts.push(`<text x="${lx + 22}" y="${ly + 13}" class="edge-label">${esc(label)}</text>`);
+      lx += 22 + label.length * 7 + 26;
+    }
+    parts.push('</g>');
   }
   parts.push('</svg>');
   return parts.join('\n');
@@ -260,3 +305,20 @@ export function wrapHtml(svg, title) {
 }
 
 export function parseIR(text) { const ir = JSON.parse(text); return ir; }
+
+// ---------------------------------------------------------------- post-render artifact check
+// Inspect a RENDERED html file (not the IR) for the ways a render can go wrong.
+export function checkOutput(html) {
+  const checks = [];
+  const add = (name, ok, detail) => checks.push({ name, ok, detail });
+  const svgs = html.match(/<svg\b[\s\S]*?<\/svg>/gi) || [];
+  add('single_svg', svgs.length === 1, `found ${svgs.length} <svg> block(s)`);
+  const svg = svgs[0] || '';
+  add('finite_coords', !/\b(NaN|undefined|Infinity|-Infinity)\b/.test(svg), 'no NaN/undefined/Infinity in the SVG');
+  add('has_viewbox', /<svg[^>]*\bviewBox="/.test(svg), 'root <svg> has a viewBox');
+  add('no_placeholders', !/__TITLE__|__DIAGRAM_SVG__/.test(html), 'template placeholders were replaced');
+  add('self_contained', !/(src|href)\s*=\s*"https?:|@import[^;]*https?:/i.test(html), 'no external network references');
+  add('has_content', /<rect\b/.test(svg) || /<line\b/.test(svg) || /<path\b/.test(svg), 'SVG contains drawn shapes');
+  add('theme_ready', /data-animate=|--node|prefers-color-scheme/.test(html), 'theme/runtime present');
+  return { checks, ok: checks.every(c => c.ok) };
+}
