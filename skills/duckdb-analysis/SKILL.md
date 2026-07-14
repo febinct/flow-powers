@@ -3,11 +3,13 @@ name: duckdb-analysis
 description: |
   Analyze tabular data files (CSV / TSV / Parquet / JSON / Excel) with SQL via a
   bundled DuckDB tool — no database setup, no loading data into the conversation.
-  Use when the user wants to explore, aggregate, join, filter, profile, or
-  summarize a data file with SQL, or asks "query this data", "run SQL on this
-  CSV/Parquet", "aggregate/group by", "join these files", "top N", "summary
-  stats", "how many rows", "analyze this dataset in DuckDB". Runs SQL in-process
-  and prints only the result; raw rows never enter the context window.
+  Use when the user wants to explore, aggregate, join, filter, profile, slice,
+  pivot, crosstab, rank, dedupe, or summarize a data file with SQL, or asks
+  "query this data", "run SQL on this CSV/Parquet", "read this Excel/CSV",
+  "what's in this file", "load this file", "aggregate/group by", "join these
+  files", "top N", "count distinct", "distribution of", "compare across",
+  "summary stats", "how many rows", "analyze this dataset in DuckDB". Runs SQL
+  in-process and prints only the result; raw rows never enter the context window.
 ---
 
 # DuckDB Analysis

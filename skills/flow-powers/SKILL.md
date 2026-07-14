@@ -5,10 +5,11 @@ description: |
   (the OUTER loop), superpowers supplies disciplined execution (the INNER loop).
   Use when starting or resuming real implementation work in a repo — a feature,
   a non-trivial bug, a migration — especially anything worth remembering across
-  sessions. Triggers: "build", "implement", "let's start on", "work on this",
-  "pick up where I left off", "resume the plan". flow binds + remembers;
-  superpowers does the engineering; every close grows the KB so the next build
-  starts smarter.
+  sessions. Triggers: "build", "implement", "start on", "let's start on",
+  "work on this", "let's work on", "continue", "keep going on", "add a feature",
+  "fix this bug", "refactor", "migrate", "ship this", "pick up where I left off",
+  "resume the plan", "restart the plan". flow binds + remembers; superpowers does
+  the engineering; every close grows the KB so the next build starts smarter.
 ---
 
 # flow-powers
