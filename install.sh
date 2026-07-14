@@ -106,7 +106,29 @@ else
   echo "      /plugin install context-mode@context-mode  (+ pyright/vtsls/jdtls/gopls@claude-code-lsps)"
 fi
 
-# --- 5. LSP language-server binaries -----------------------------------------
+# --- 5. Playwright MCP (frontend browser verification) -----------------------
+# Agent browser control for the FE arm of the verification gate: drive the
+# running app, snapshot, screenshot (see SKILL.md loop step 2). Added at USER
+# scope so it's available in every repo. Best-effort; set FLOW_POWERS_PLAYWRIGHT=0
+# to skip. Needs `claude` + a node/npx runtime (server runs via npx).
+if [ "${FLOW_POWERS_PLAYWRIGHT-1}" != "0" ]; then
+  if command -v claude >/dev/null 2>&1; then
+    if claude mcp get playwright >/dev/null 2>&1; then
+      echo "  ok: MCP playwright present"
+    elif command -v npx >/dev/null 2>&1; then
+      claude mcp add playwright --scope user -- npx -y @playwright/mcp@latest >/dev/null 2>&1 \
+        && echo "  ok: MCP playwright added (user scope)" \
+        || echo "  ! note: could not add playwright MCP — add manually: claude mcp add playwright --scope user -- npx -y @playwright/mcp@latest"
+    else
+      echo "  ! note: npx not found — skipping playwright MCP (install Node, then: claude mcp add playwright --scope user -- npx -y @playwright/mcp@latest)"
+    fi
+  else
+    echo "  ! warning: 'claude' CLI not on PATH — add playwright MCP manually:"
+    echo "      claude mcp add playwright --scope user -- npx -y @playwright/mcp@latest"
+  fi
+fi
+
+# --- 6. LSP language-server binaries -----------------------------------------
 # Plugins declare HOW to launch a server; the binary must be on the PATH Claude
 # Code inherits. Auto-install gopls (the common miss: `go install` drops it in
 # ~/go/bin, which must be on PATH), then report the whole picture.

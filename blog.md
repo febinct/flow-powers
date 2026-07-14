@@ -70,6 +70,12 @@ Two ambient boosters make the loop practical, not just elegant:
   vtsls, jdtls — give the agent go-to-definition, references, and diagnostics, so
   superpowers edits against real symbol knowledge and catches type errors
   immediately instead of at test time.
+- **[Playwright MCP](https://github.com/microsoft/playwright-mcp)** makes
+  frontend verification *real*. For a UI change, passing unit tests proves
+  nothing about whether the thing renders. The MCP is agent browser control — not
+  a test runner — so the agent drives the running app (navigate, click, snapshot,
+  screenshot) and the verification gate points at an actual rendered result.
+  Without it, "the UI works" is an assumption; with it, it's evidence.
 
 ## The honest caveat
 

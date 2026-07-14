@@ -42,8 +42,8 @@ phases. flow touches only the **edges**:
 
 ## Ambient stack (best-effort amplifiers the installer wires in)
 
-Two capabilities the loop assumes are present — it runs without them, just
-noisier and blinder:
+Three capabilities the loop assumes are present — it runs without them, just
+noisier, blinder, and unable to *see* UI changes:
 
 - **[context-mode](https://github.com/mksglu/context-mode)** — routes large tool
   output (test runs, logs, greps) through a sandbox so raw bytes stay out of the
@@ -52,6 +52,12 @@ noisier and blinder:
   (pyright / vtsls / jdtls / gopls / …) — real code intelligence (defs, refs,
   diagnostics) for superpowers' edits and its verification gate. They surface as
   diagnostics, **not** as tools, and need the server binary on PATH + a restart.
+- **[Playwright MCP](https://github.com/microsoft/playwright-mcp)** — agent
+  browser control (`mcp__playwright__browser_*`). The **frontend arm** of the
+  verification gate: for UI changes, the agent drives the running app —
+  navigate, click, snapshot, screenshot — so "it renders and behaves" is
+  evidenced, not assumed. It's browser control, **not** a test runner. Installed
+  at user scope; skip via `FLOW_POWERS_PLAYWRIGHT=0`.
 
 ## The one rule (prevents drift)
 
@@ -98,14 +104,16 @@ git clone --recurse-submodules https://github.com/febinct/flow-powers && cd flow
 
 `install.sh` also (best-effort) adds the context-mode + claude-code-lsps
 marketplaces, installs context-mode plus an LSP set (override with
-`FLOW_POWERS_LSPS="pyright gopls"`, or `""` to skip), auto-installs `gopls` when
+`FLOW_POWERS_LSPS="pyright gopls"`, or `""` to skip), adds the **Playwright MCP**
+at user scope (skip with `FLOW_POWERS_PLAYWRIGHT=0`), auto-installs `gopls` when
 Go is present, and runs `hooks/lsp-doctor` to flag any LSP server binary missing
 from PATH. It degrades gracefully to printed instructions if the `claude` CLI
 isn't found.
 
 Then **restart Claude Code** (a full relaunch, not `--resume`) so the hook,
-skill, and any newly-enabled plugins + language servers load. The hook injects a
-pointer; the `flow-powers` skill triggers when you start real build work.
+skill, and any newly-enabled plugins + language servers + MCP servers load. The
+hook injects a pointer; the `flow-powers` skill triggers when you start real
+build work.
 
 ## Layout
 
@@ -116,16 +124,18 @@ flow-powers/
 ├── hooks/session-start           injects the flow-powers pointer (+ LSP warning)
 ├── hooks/lsp-doctor              checks each enabled LSP's server binary is on PATH
 ├── .claude-plugin/plugin.json    Claude Code plugin manifest
+├── .claude-plugin/marketplace.json  makes the repo /plugin-installable
 ├── install.sh                    idempotent installer (skill, hook, stack, backups)
 ├── docs/
-│   ├── HOW-IT-WORKS.md           how flow, superpowers, context-mode & LSPs each work
+│   ├── HOW-IT-WORKS.md           how flow, superpowers, context-mode, LSPs & Playwright each work
 │   └── DESIGN.md                 mental model + seams + tradeoffs
 ├── blog.md                       the story: why chain these, what compounds
 └── vendor/                       pinned submodules (reference only)
     ├── flow/               @ v0.1.0-alpha.24
     ├── superpowers/        @ v6.1.1
     ├── context-mode/       @ v1.0.169+
-    └── claude-code-lsps/   @ main
+    ├── claude-code-lsps/   @ main
+    └── playwright-mcp/     @ v0.0.78
 ```
 
 `vendor/` is pinned reference so the glue matches real upstream behaviour; the

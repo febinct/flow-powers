@@ -52,6 +52,10 @@ them, just noisier and blinder):
   (definitions, references, diagnostics) for superpowers' edits and its
   verification gate. They surface as diagnostics after edits, **not** as callable
   tools — so "nothing new in the tool list" is expected, not a failure.
+- **Playwright MCP** (`mcp__playwright__browser_*`) — agent browser control for
+  the frontend verification arm of the gate: drive the running app, snapshot,
+  screenshot. Evidence that a UI change actually renders and behaves (see loop
+  step 2). Not a test runner — it's how the agent *looks* at the change.
 
 ## The one rule (prevents drift)
 
@@ -89,6 +93,20 @@ depends on the task shape** — don't force a plan onto a one-line fix:
   spec. Finish via `finishing-a-development-branch`.
 - Either way, its gate stays its gate: tests pass + review clean +
   `verification-before-completion`. Don't add ceremony it already enforces.
+
+**Frontend changes — verify in a real browser via the Playwright MCP.** Unit
+tests passing is NOT evidence a UI change actually works. When the task touches
+rendered UI (components, pages, styles, routing, forms), the
+`verification-before-completion` gate must include browser evidence gathered
+with the **Playwright MCP** (`mcp__playwright__browser_*` — agent browser
+control, not a test runner):
+- Start the dev server, then `browser_navigate` to its URL and drive the actual
+  change — `browser_click`, `browser_type`, `browser_fill_form`,
+  `browser_snapshot` (accessibility tree), `browser_take_screenshot`.
+- Confirm the change *renders and behaves* as intended; the snapshot/screenshot
+  is the concrete evidence the gate needs — including for a one-off tweak.
+- Record it in the phase note (step 3): *"FE verified ✅ — screenshot at …"*.
+  No browser evidence → the FE change is not "done".
 
 ### 3. Mark the trail — flow seams (non-invasive, during step 2)
 Two lightweight **file writes** (not CLI — there is no `flow note`/`flow kb`).

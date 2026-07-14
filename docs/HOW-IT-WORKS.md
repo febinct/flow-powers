@@ -4,7 +4,7 @@ Background for anyone using flow-powers. This explains each piece on its own —
 what it is, the mechanism that makes it tick, and the commands/skills you'll
 touch. For how flow + superpowers combine, see [`DESIGN.md`](DESIGN.md).
 
-The stack has two **core** tools and two **ambient boosters**:
+The stack has two **core** tools and three **ambient boosters**:
 
 | Piece | Role | Kind |
 |---|---|---|
@@ -12,10 +12,12 @@ The stack has two **core** tools and two **ambient boosters**:
 | **superpowers** | disciplined execution (the INNER loop) | CC plugin (skills) |
 | **context-mode** | keeps large tool output out of the conversation | CC plugin (MCP + hooks) |
 | **LSP parsers** | real code intelligence for edits + verification | CC plugins (native LSP) |
+| **Playwright MCP** | agent browser control — the frontend verification arm | MCP server (npx) |
 
-flow + superpowers are the flywheel; context-mode and the LSP parsers are
-best-effort amplifiers the loop assumes are present (it still runs without them,
-just noisier and blinder). The installer wires all four.
+flow + superpowers are the flywheel; context-mode, the LSP parsers, and the
+Playwright MCP are best-effort amplifiers the loop assumes are present (it still
+runs without them, just noisier, blinder, and unable to *see* UI changes). The
+installer wires all five.
 
 ---
 
@@ -208,6 +210,45 @@ npm i -g pyright @vtsls/language-server typescript
 
 ---
 
+## Playwright MCP — the frontend verification arm
+
+**Repo:** https://github.com/microsoft/playwright-mcp · **What it is:** an MCP
+server (`@playwright/mcp`, run via `npx`) that gives the agent **browser
+control** — a set of `mcp__playwright__browser_*` tools to navigate, click,
+type, fill forms, snapshot the accessibility tree, and screenshot a running app.
+
+### What it is — and isn't
+It is **agent browser control**, *not* a test runner. It does not run your
+`*.spec.ts` suite or replace `@playwright/test`; it lets the agent open the app
+and *look*. That distinction is the point: for a UI change, "unit tests pass" is
+not evidence the thing renders and behaves — a human (or agent) has to see it.
+The MCP is how the agent sees it.
+
+### The mechanism that matters
+- **`browser_navigate`** to the dev server's URL, then drive the actual change:
+  `browser_click`, `browser_type`, `browser_fill_form`, `browser_select_option`.
+- **`browser_snapshot`** returns the accessibility tree with stable element refs
+  — better than a screenshot for *acting* on the page (it's what you target).
+- **`browser_take_screenshot`** captures the rendered result — the concrete
+  artifact the verification gate points at. (Saves to the server's cwd root.)
+- **`browser_console_messages` / `browser_network_requests`** surface JS errors
+  and failed requests — often the real reason a change "looks broken."
+
+### Why it matters for flow-powers
+It's the **frontend arm of `verification-before-completion`** (see the loop,
+step 2). When a task touches rendered UI, the gate isn't satisfied by unit tests
+alone — the agent drives the running app through the MCP and attaches a
+snapshot/screenshot as evidence. No browser evidence → the FE change isn't done.
+
+### Install
+```
+claude mcp add playwright --scope user -- npx -y @playwright/mcp@latest
+```
+User scope makes it available in every repo. Browsers are fetched on first use
+(or `npx playwright install chromium`). Restart Claude Code to load its tools.
+
+---
+
 ## One line each
 - **flow** decides *what/why* and **remembers** — its `flow done` sweep grows a
   KB that auto-injects into future sessions.
@@ -217,7 +258,10 @@ npm i -g pyright @vtsls/language-server typescript
   searched, not pasted, so long builds run further.
 - **LSP parsers** make edits and verification **sighted** — real defs, refs, and
   diagnostics instead of guessing.
+- **Playwright MCP** makes frontend verification **real** — the agent drives the
+  running app in a browser instead of assuming the UI works.
 
 flow-powers chains flow + superpowers so memory feeds discipline and discipline
-feeds memory; context-mode and the LSP parsers keep that loop lean and sighted.
-See [`DESIGN.md`](DESIGN.md).
+feeds memory; context-mode, the LSP parsers, and the Playwright MCP keep that
+loop lean, sighted, and able to verify UI in a real browser. See
+[`DESIGN.md`](DESIGN.md).

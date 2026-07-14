@@ -10,3 +10,6 @@
 [submodule "vendor/claude-code-lsps"]
 	path = vendor/claude-code-lsps
 	url = https://github.com/Piebald-AI/claude-code-lsps.git
+[submodule "vendor/playwright-mcp"]
+	path = vendor/playwright-mcp
+	url = https://github.com/microsoft/playwright-mcp.git
