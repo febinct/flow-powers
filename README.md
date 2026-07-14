@@ -170,6 +170,27 @@ never the vendored copies. Update with `git submodule update --remote`.
 </details>
 
 <details>
+<summary><b>Hooks</b></summary>
+
+flow-powers registers **one** hook of its own — a **SessionStart** hook
+(`hooks/session-start`, wired via `hooks/hooks.json`, matcher `startup|clear|compact`).
+On each fire it:
+
+- injects a short pointer telling the session to run the `flow-powers` skill;
+- folds in a readiness warning from `hooks/lsp-doctor` when an enabled LSP's
+  server binary is missing from PATH — so a dead LSP surfaces instead of failing
+  silently;
+- emits the shape the host consumes: `hookSpecificOutput` for Claude Code,
+  `additional_context` for Cursor, top-level `additionalContext` otherwise.
+
+`hooks/lsp-doctor` is a helper you can also run directly — it checks every
+enabled LSP's server binary and prints fix commands. It is not a registered hook.
+
+Separately, **flow** installs its own SessionStart + UserPromptSubmit hooks (its
+task binding + drift anchor). Those belong to flow, not this plugin.
+</details>
+
+<details>
 <summary><b>Adding a skill</b></summary>
 
 1. Create `skills/<name>/SKILL.md` (with `name` + `description` frontmatter).

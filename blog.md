@@ -17,13 +17,14 @@ Here's where it's landed.
 
 Two open-source tools, each doing one thing well:
 
-- **flow** — memory. A tiny CLI that tracks work as tasks, binds a Claude
-  session to one, and — the part that matters — when I close a task it sweeps the
-  whole transcript into a knowledge base that auto-injects into every future
-  session.
-- **superpowers** — discipline. It forces a real methodology: brainstorm the
-  spec, write a plan, build test-first with review, verify before claiming done.
-  Great output. Then it forgets everything at session end.
+- **[flow](https://github.com/Facets-cloud/flow)** — memory. A tiny CLI that
+  tracks work as tasks, binds a Claude session to one, and — the part that
+  matters — when I close a task it sweeps the whole transcript into a knowledge
+  base that auto-injects into every future session.
+- **[superpowers](https://github.com/obra/superpowers)** — discipline. It forces
+  a real methodology: brainstorm the spec, write a plan, build test-first with
+  review, verify before claiming done. Great output. Then it forgets everything
+  at session end.
 
 Neither is missing a *step*. They're missing each other's *nature*. So I chained
 them into one loop I call **flow-powers**: flow's memory feeds superpowers'
@@ -37,12 +38,15 @@ compounding is the whole point.
 
 A loop is only as good as what it can see and hold, so I wired in three more:
 
-- **context-mode** — keeps huge tool output (test runs, logs, greps) out of the
-  conversation, so long sessions don't drown in their own noise.
-- **LSP servers** (gopls, pyright, vtsls, jdtls) — real go-to-definition and
-  diagnostics, so edits are made with actual code knowledge, not guesses.
-- **Playwright MCP** — lets the agent open the running app in a browser and
-  *look* at a UI change instead of assuming it works.
+- **[context-mode](https://github.com/mksglu/context-mode)** — keeps huge tool
+  output (test runs, logs, greps) out of the conversation, so long sessions
+  don't drown in their own noise.
+- **[LSP servers](https://github.com/Piebald-AI/claude-code-lsps)** (gopls,
+  pyright, vtsls, jdtls) — real go-to-definition and diagnostics, so edits are
+  made with actual code knowledge, not guesses.
+- **[Playwright MCP](https://github.com/microsoft/playwright-mcp)** — lets the
+  agent open the running app in a browser and *look* at a UI change instead of
+  assuming it works.
 
 One installer sets all of it up.
 
@@ -117,7 +121,15 @@ diagram, and asking for a change ("add Redis", "move auth left") is a small edit
 to the JSON, not a re-roll of the whole picture. That's the difference between a
 diagram *tool* and a lucky prompt.
 
-It's all open source and tested in CI. Happy to share the repo if it's useful to
-anyone building out their own agent setup.
+It's all open source and tested in CI:
+**[github.com/febinct/flow-powers](https://github.com/febinct/flow-powers)**.
+Happy to share if it's useful to anyone building out their own agent setup.
+
+**Built on the shoulders of:**
+[flow](https://github.com/Facets-cloud/flow) ·
+[superpowers](https://github.com/obra/superpowers) ·
+[context-mode](https://github.com/mksglu/context-mode) ·
+[claude-code-lsps](https://github.com/Piebald-AI/claude-code-lsps) ·
+[playwright-mcp](https://github.com/microsoft/playwright-mcp)
 
 *#ClaudeCode #AI #DeveloperTools #Engineering #LLM #Productivity*
