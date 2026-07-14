@@ -31,6 +31,8 @@ discipline, and each disciplined build feeds flow's memory back. The knowledge
 base gets richer, so the next brainstorm starts warm instead of cold. That
 compounding is the whole point.
 
+![the compounding loop](docs/diagrams/flow-powers.svg)
+
 ## The stack around it
 
 A loop is only as good as what it can see and hold, so I wired in three more:
@@ -54,8 +56,10 @@ Once the loop worked, adding capabilities got addictive:
 - **arch-diagram-builder** — describe a system in plain English, get a
   self-contained HTML architecture diagram with a dark/light toggle and one-click
   export. It has a real layout engine and validation, not just an LLM guessing
-  coordinates. The fun part: I had it draw *its own repo's* architecture, and
-  those diagrams now live in the README.
+  coordinates. The fun part: I had it draw *its own repo's* architecture — the
+  diagram below is the arch-diagram-builder, drawn by the arch-diagram-builder.
+
+![arch-diagram-builder, drawn by itself](docs/diagrams/arch-diagram-builder.svg)
 
 ## The honest lessons (this is the real post)
 
