@@ -136,9 +136,12 @@ build work.
 flow-powers/
 ├── skills/                       one dir per skill (each with a SKILL.md)
 │   ├── flow-powers/SKILL.md      the orchestration protocol (the heart)
-│   └── duckdb-analysis/          SQL over CSV/Parquet/Excel via a bundled DuckDB tool
+│   ├── duckdb-analysis/          SQL over CSV/Parquet/Excel via a bundled DuckDB tool
+│   │   ├── SKILL.md
+│   │   └── scripts/duckdb_tool.py
+│   └── arch-diagram-builder/     English → self-contained themeable HTML diagram
 │       ├── SKILL.md
-│       └── scripts/duckdb_tool.py
+│       └── scripts/{build-diagram.mjs, template.html}
 ├── hooks/hooks.json              SessionStart registration
 ├── hooks/session-start           injects the flow-powers pointer (+ LSP warning)
 ├── hooks/lsp-doctor              checks each enabled LSP's server binary is on PATH
@@ -170,6 +173,11 @@ with `git submodule update --remote`.
   (`skills/duckdb-analysis/scripts/duckdb_tool.py`). Prints only the derived
   result; raw rows never enter the conversation. Pairs with context-mode as the
   "keep data out of the window" discipline. Requires `uv` on PATH.
+- **`arch-diagram-builder`** — turn a plain-English description into a
+  self-contained, themeable HTML diagram (architecture / workflow / sequence /
+  data-flow / state) via a bundled Node tool (`scripts/build-diagram.mjs`, zero
+  deps). Dark/light toggle, semantic tech categories, and export to PNG / JPEG /
+  WebP (native up to 4×) or a dual-theme SVG. Requires `node` on PATH.
 
 ### Adding a skill
 

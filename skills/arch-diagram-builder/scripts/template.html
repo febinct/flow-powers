@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__</title>
+<style>
+  /* Theme via CSS variables. Default follows the OS; the toggle forces + persists. */
+  :root {
+    --bg:#ffffff; --panel:#f6f8fa; --border:#d0d7de; --text:#1f2328; --muted:#656d76;
+    --node:#eef2ff; --node-border:#c7d2fe; --node-text:#312e81;
+    --edge:#8b95a5; --accent:#4f46e5; --accent-text:#ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#0b1020; --panel:#131a2e; --border:#2a3550; --text:#e6edf3; --muted:#9aa7b8;
+      --node:#1e2740; --node-border:#3a496b; --node-text:#dbe4ff;
+      --edge:#5b6a86; --accent:#818cf8; --accent-text:#0b1020;
+    }
+  }
+  html[data-theme="light"] {
+    --bg:#ffffff; --panel:#f6f8fa; --border:#d0d7de; --text:#1f2328; --muted:#656d76;
+    --node:#eef2ff; --node-border:#c7d2fe; --node-text:#312e81;
+    --edge:#8b95a5; --accent:#4f46e5; --accent-text:#ffffff;
+  }
+  html[data-theme="dark"] {
+    --bg:#0b1020; --panel:#131a2e; --border:#2a3550; --text:#e6edf3; --muted:#9aa7b8;
+    --node:#1e2740; --node-border:#3a496b; --node-text:#dbe4ff;
+    --edge:#5b6a86; --accent:#818cf8; --accent-text:#0b1020;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  .bar { display:flex; align-items:center; gap:12px; padding:12px 18px;
+    border-bottom:1px solid var(--border); background:var(--panel); position:sticky; top:0; }
+  .bar h1 { font-size:15px; font-weight:600; margin:0; flex:1; }
+  .btn { font:inherit; font-size:13px; padding:6px 12px; border-radius:8px; cursor:pointer;
+    border:1px solid var(--border); background:var(--bg); color:var(--text); }
+  .btn:hover { border-color:var(--accent); }
+  .menu { position:relative; }
+  .menu-list { position:absolute; right:0; top:calc(100% + 6px); background:var(--bg);
+    border:1px solid var(--border); border-radius:10px; padding:6px; min-width:170px;
+    box-shadow:0 8px 30px rgba(0,0,0,.25); z-index:10; }
+  .menu-list[hidden] { display:none; }
+  .menu-list button { display:block; width:100%; text-align:left; border:0; background:none;
+    color:var(--text); font:inherit; font-size:13px; padding:8px 10px; border-radius:6px; cursor:pointer; }
+  .menu-list button:hover { background:var(--panel); }
+  #stage { padding:28px; overflow:auto; }
+  #stage svg { max-width:100%; height:auto; display:block; margin:0 auto; }
+  /* Semantic classes the diagram SVG can use so both themes stay consistent. */
+  .node { fill:var(--node); stroke:var(--node-border); stroke-width:1.5; }
+  .node-accent { fill:var(--accent); stroke:var(--accent); }
+  .label { fill:var(--node-text); font-family:inherit; font-size:14px; }
+  .label-accent { fill:var(--accent-text); font-family:inherit; font-size:14px; }
+  .muted { fill:var(--muted); font-family:inherit; font-size:12px; }
+  .edge { stroke:var(--edge); stroke-width:1.75; fill:none; }
+  .edge-label { fill:var(--muted); font-family:inherit; font-size:11px; }
+  /* Semantic tech categories — map a component to a category for consistent color.
+     Translucent fills read on both themes; saturated strokes stay legible. */
+  .cat-frontend { fill:rgba(34,211,238,.14); stroke:#22d3ee; stroke-width:1.5; }
+  .cat-backend  { fill:rgba(52,211,153,.14); stroke:#34d399; stroke-width:1.5; }
+  .cat-database { fill:rgba(167,139,250,.16); stroke:#a78bfa; stroke-width:1.5; }
+  .cat-cloud    { fill:rgba(251,191,36,.14);  stroke:#fbbf24; stroke-width:1.5; }
+  .cat-security { fill:rgba(244,63,94,.14);   stroke:#f43f5e; stroke-width:1.5; }
+  .cat-queue    { fill:rgba(251,146,60,.16);  stroke:#fb923c; stroke-width:1.5; }
+  .cat-external { fill:rgba(148,163,184,.16); stroke:#94a3b8; stroke-width:1.5; stroke-dasharray:5 4; }
+  .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+    background:var(--accent); color:var(--accent-text); padding:9px 16px; border-radius:20px;
+    font-size:13px; opacity:0; transition:opacity .2s; pointer-events:none; }
+  .toast.show { opacity:1; }
+</style>
+</head>
+<body>
+  <div class="bar">
+    <h1>__TITLE__</h1>
+    <button class="btn" id="themeBtn" title="Toggle theme (T)">◐ Theme</button>
+    <div class="menu">
+      <button class="btn" id="exportBtn" aria-haspopup="true">Export ▾</button>
+      <div class="menu-list" id="exportMenu" hidden>
+        <button data-act="copy">Copy PNG to clipboard</button>
+        <button data-act="png">Download PNG (up to 4×)</button>
+        <button data-act="jpeg">Download JPEG (up to 4×)</button>
+        <button data-act="webp">Download WebP (up to 4×)</button>
+        <button data-act="svg">Download SVG (dual-theme)</button>
+      </div>
+    </div>
+  </div>
+  <div id="stage">
+__DIAGRAM_SVG__
+  </div>
+  <div class="toast" id="toast"></div>
+<script>
+(() => {
+  const root = document.documentElement;
+  const svg = document.querySelector('#stage svg');
+  const toast = (m) => { const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1600); };
+  const VARS = ['--bg','--panel','--border','--text','--muted','--node','--node-border','--node-text','--edge','--accent','--accent-text','--label-accent'];
+
+  // --- theme toggle (persist + follow OS by default) ---
+  const saved = localStorage.getItem('diagram-theme');
+  if (saved) root.setAttribute('data-theme', saved);
+  const curTheme = () => root.getAttribute('data-theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  const setTheme = (t) => { root.setAttribute('data-theme', t); localStorage.setItem('diagram-theme', t); };
+  document.getElementById('themeBtn').onclick = () => setTheme(curTheme() === 'dark' ? 'light' : 'dark');
+
+  // --- export menu ---
+  const menu = document.getElementById('exportMenu');
+  document.getElementById('exportBtn').onclick = (e) => { e.stopPropagation(); menu.hidden = !menu.hidden; };
+  document.addEventListener('click', () => { menu.hidden = true; });
+  menu.addEventListener('click', (e) => { const a = e.target.getAttribute('data-act'); if (a) doExport(a); menu.hidden = true; });
+
+  // read concrete values of the theme vars for a given theme
+  function varsFor(theme) {
+    const prev = root.getAttribute('data-theme');
+    root.setAttribute('data-theme', theme);
+    const cs = getComputedStyle(root); const o = {};
+    VARS.forEach(v => { const val = cs.getPropertyValue(v).trim(); if (val) o[v] = val; });
+    if (prev === null) root.removeAttribute('data-theme'); else root.setAttribute('data-theme', prev);
+    return o;
+  }
+  const declBlock = (obj) => Object.entries(obj).map(([k,v]) => `${k}:${v};`).join('');
+
+  // clone the svg and inline a self-theming <style> so the export stands alone
+  function standaloneSVG(dualTheme) {
+    const clone = svg.cloneNode(true);
+    if (!clone.getAttribute('xmlns')) clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    const light = varsFor('light'), dark = varsFor('dark');
+    let css = `:root{${declBlock(light)}}`;
+    if (dualTheme) css += `@media (prefers-color-scheme:dark){:root{${declBlock(dark)}}}`;
+    else css = `:root{${declBlock(curTheme() === 'dark' ? dark : light)}}`;
+    // re-declare the semantic classes so the standalone file needs no external CSS
+    css += `.node{fill:var(--node);stroke:var(--node-border);stroke-width:1.5}.node-accent{fill:var(--accent);stroke:var(--accent)}`
+        +  `.label{fill:var(--node-text);font-family:sans-serif;font-size:14px}.label-accent{fill:var(--accent-text);font-family:sans-serif;font-size:14px}`
+        +  `.muted{fill:var(--muted);font-family:sans-serif;font-size:12px}.edge{stroke:var(--edge);stroke-width:1.75;fill:none}`
+        +  `.edge-label{fill:var(--muted);font-family:sans-serif;font-size:11px}`
+        +  `.cat-frontend{fill:rgba(34,211,238,.14);stroke:#22d3ee;stroke-width:1.5}.cat-backend{fill:rgba(52,211,153,.14);stroke:#34d399;stroke-width:1.5}`
+        +  `.cat-database{fill:rgba(167,139,250,.16);stroke:#a78bfa;stroke-width:1.5}.cat-cloud{fill:rgba(251,191,36,.14);stroke:#fbbf24;stroke-width:1.5}`
+        +  `.cat-security{fill:rgba(244,63,94,.14);stroke:#f43f5e;stroke-width:1.5}.cat-queue{fill:rgba(251,146,60,.16);stroke:#fb923c;stroke-width:1.5}`
+        +  `.cat-external{fill:rgba(148,163,184,.16);stroke:#94a3b8;stroke-width:1.5;stroke-dasharray:5 4}`;
+    const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+    style.textContent = css;
+    clone.insertBefore(style, clone.firstChild);
+    return new XMLSerializer().serializeToString(clone);
+  }
+
+  function download(name, blob) { const u = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = u; a.download = name; a.click(); URL.revokeObjectURL(u); }
+
+  // native-resolution rasterization: size the exported SVG to viewBox × scale so
+  // the browser rasterizes the vectors at target resolution, then draw at natural
+  // size — no upsampling blur. Step 4→3→2→1 to stay under the canvas pixel cap.
+  const RASTER = 4, MAX_PX = 16 * 1024 * 1024;
+  const pickScale = (w, h) => { for (let s = RASTER; s >= 1; s--) if (w * s * h * s <= MAX_PX) return s; return 1; };
+  const currentBg = () => getComputedStyle(root).getPropertyValue('--bg').trim() || '#ffffff';
+
+  async function rasterize(format) {
+    const vb = svg.viewBox.baseVal, w = (vb && vb.width) || svg.clientWidth || 1200, h = (vb && vb.height) || svg.clientHeight || 800;
+    const scale = pickScale(w, h);
+    let s = standaloneSVG(false)
+      .replace(/^(<svg[^>]*?)\swidth="[^"]*"/i, '$1').replace(/^(<svg[^>]*?)\sheight="[^"]*"/i, '$1')
+      .replace(/^<svg/i, `<svg width="${w * scale}" height="${h * scale}"`);
+    const img = new Image();
+    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s); });
+    const c = document.createElement('canvas'); c.width = w * scale; c.height = h * scale;
+    const ctx = c.getContext('2d');
+    if (format === 'jpeg') { ctx.fillStyle = currentBg(); ctx.fillRect(0, 0, c.width, c.height); }
+    ctx.drawImage(img, 0, 0);                       // natural size — SVG already at target res
+    const mime = format === 'jpeg' ? 'image/jpeg' : format === 'webp' ? 'image/webp' : 'image/png';
+    const blob = await new Promise(r => c.toBlob(r, mime, format === 'png' ? undefined : 0.95));
+    return { blob, scale };
+  }
+
+  async function doExport(act) {
+    try {
+      if (act === 'svg') { download('diagram.svg', new Blob([standaloneSVG(true)], { type: 'image/svg+xml' })); toast('SVG downloaded'); return; }
+      const fmt = act === 'copy' ? 'png' : act;
+      const { blob, scale } = await rasterize(fmt);
+      if (!blob) throw new Error('rasterize returned null');
+      if (act === 'copy') { await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]); toast(`PNG copied (${scale}×)`); return; }
+      download('diagram.' + (fmt === 'jpeg' ? 'jpg' : fmt), blob); toast(`${fmt.toUpperCase()} downloaded (${scale}×)`);
+    } catch (e) { toast('Export failed: ' + e.message); }
+  }
+
+  // keyboard: T = theme, E = export
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.key.toLowerCase() === 't') document.getElementById('themeBtn').click();
+    if (e.key.toLowerCase() === 'e') document.getElementById('exportBtn').click();
+  });
+})();
+</script>
+</body>
+</html>

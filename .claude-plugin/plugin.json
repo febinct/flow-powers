@@ -5,6 +5,6 @@
   "author": {
     "name": "febin.sathar"
   },
-  "skills": ["./skills/flow-powers", "./skills/duckdb-analysis"],
+  "skills": ["./skills/flow-powers", "./skills/duckdb-analysis", "./skills/arch-diagram-builder"],
   "hooks": "./hooks/hooks.json"
 }

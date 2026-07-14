@@ -203,20 +203,43 @@ else
   no "Q-T duckdb tool (missing tool or uv)"
 fi
 
+echo "== arch-diagram-builder (build-diagram.mjs) =="
+BD="$REPO/skills/arch-diagram-builder/scripts/build-diagram.mjs"
+if [ -f "$BD" ] && command -v node >/dev/null 2>&1; then
+  DD="$TMP/diag"; mkdir -p "$DD"
+  printf '<svg viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg"><rect class="cat-backend" x="10" y="10" width="80" height="40" rx="8"/><text class="label" x="50" y="35">API</text></svg>' > "$DD/d.svg"
+  node "$BD" --title "T&<test>" --svg "$DD/d.svg" --out "$DD/o.html" >/dev/null 2>&1
+  # Y1 produces a file with no leftover placeholders
+  if [ -f "$DD/o.html" ] && ! grep -q '__TITLE__\|__DIAGRAM_SVG__' "$DD/o.html"; then ok "Y build: placeholders replaced"; else no "Y build placeholders"; fi
+  # Y2 self-contained: no external network refs
+  grep -qiE 'src="https?:|<link[^>]+https?:|@import[^;]*https?:' "$DD/o.html" && no "Y2 self-contained (external ref found)" || ok "Y2 self-contained (no external refs)"
+  # Y3 title HTML-escaped (& -> &amp;, < -> &lt;)
+  grep -q 'T&amp;&lt;test&gt;' "$DD/o.html" && ok "Y3 title HTML-escaped" || no "Y3 title escape"
+  # Y4 svg injected + export menu present with all 5 formats
+  grep -q 'class="cat-backend"' "$DD/o.html" && for a in copy png jpeg webp svg; do grep -q "data-act=\"$a\"" "$DD/o.html" || { no "Y4 export menu missing $a"; break; }; done && ok "Y4 svg injected + 5 export formats" || no "Y4 svg/menu"
+  # Y5 rejects non-svg input
+  printf 'not an svg' | node "$BD" --title x --out "$DD/bad.html" >/dev/null 2>&1 && no "Y5 rejects non-svg" || ok "Y5 rejects non-svg input"
+  # Y6 adds xmlns when missing
+  printf '<svg viewBox="0 0 10 10"><rect/></svg>' | node "$BD" --title x --out "$DD/x.html" >/dev/null 2>&1
+  grep -q 'xmlns="http://www.w3.org/2000/svg"' "$DD/x.html" && ok "Y6 injects xmlns" || no "Y6 xmlns"
+else
+  no "Y build-diagram (missing script or node)"
+fi
+
 echo "== skill + plugin manifests =="
 # U. both skills present with matching name frontmatter
-for pair in "flow-powers:flow-powers" "duckdb-analysis:duckdb-analysis"; do
+for pair in "flow-powers:flow-powers" "duckdb-analysis:duckdb-analysis" "arch-diagram-builder:arch-diagram-builder"; do
   dir="${pair%%:*}"; want="${pair##*:}"; f="$REPO/skills/$dir/SKILL.md"
   nm="$(sed -n 's/^name:[[:space:]]*//p' "$f" | head -1)"
   [ "$nm" = "$want" ] && ok "U $dir name=$want" || no "U $dir name" "$nm"
 done
 # V. plugin.json lists both skills, author is an object
 pj="$REPO/.claude-plugin/plugin.json"
-python3 - "$pj" <<'PY' && ok "V plugin.json: 2 skills, author object" || no "V plugin.json"
+python3 - "$pj" <<'PY' && ok "V plugin.json: 3 skills, author object" || no "V plugin.json"
 import json,sys
 d=json.load(open(sys.argv[1]))
 sk=d.get("skills",[])
-assert "./skills/flow-powers" in sk and "./skills/duckdb-analysis" in sk, sk
+assert all(x in sk for x in ["./skills/flow-powers","./skills/duckdb-analysis","./skills/arch-diagram-builder"]), sk
 assert isinstance(d.get("author"),dict), d.get("author")
 PY
 # W. trigger verbs landed in descriptions
