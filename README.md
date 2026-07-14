@@ -120,7 +120,10 @@ build work.
 ```
 flow-powers/
 ├── skills/                       one dir per skill (each with a SKILL.md)
-│   └── flow-powers/SKILL.md      the orchestration protocol (the heart)
+│   ├── flow-powers/SKILL.md      the orchestration protocol (the heart)
+│   └── duckdb-analysis/          SQL over CSV/Parquet/Excel via a bundled DuckDB tool
+│       ├── SKILL.md
+│       └── scripts/duckdb_tool.py
 ├── hooks/hooks.json              SessionStart registration
 ├── hooks/session-start           injects the flow-powers pointer (+ LSP warning)
 ├── hooks/lsp-doctor              checks each enabled LSP's server binary is on PATH
@@ -142,6 +145,15 @@ flow-powers/
 `vendor/` is pinned reference so the glue matches real upstream behaviour; the
 runtime uses your **installed** flow + superpowers. Update reference with
 `git submodule update --remote`.
+
+### Skills in this repo
+
+- **`flow-powers`** — the orchestration loop (this README's subject).
+- **`duckdb-analysis`** — query tabular files (CSV / TSV / Parquet / JSON /
+  Excel) with SQL through a bundled, dependency-free DuckDB `uv` tool
+  (`skills/duckdb-analysis/scripts/duckdb_tool.py`). Prints only the derived
+  result; raw rows never enter the conversation. Pairs with context-mode as the
+  "keep data out of the window" discipline. Requires `uv` on PATH.
 
 ### Adding a skill
 

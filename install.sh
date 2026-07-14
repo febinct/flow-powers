@@ -39,8 +39,15 @@ skill_count=0
 for skill in "$REPO"/skills/*/; do
   [ -f "$skill/SKILL.md" ] || continue
   name="$(basename "$skill")"
-  ln -sfn "${skill%/}" "$SKILLS_DIR/$name"
-  echo "  ok: skill $name -> $SKILLS_DIR/$name"
+  dest="$SKILLS_DIR/$name"
+  # If a NON-symlink already occupies the name (another installed skill), do NOT
+  # ln into it — that nests the link inside the dir. Warn and skip instead.
+  if [ -e "$dest" ] && [ ! -L "$dest" ]; then
+    echo "  ! skip: skill $name — $dest already exists and isn't our symlink (name clash). Rename one."
+    continue
+  fi
+  ln -sfn "${skill%/}" "$dest"   # -f safely replaces our own (or a stale) symlink
+  echo "  ok: skill $name -> $dest"
   skill_count=$((skill_count + 1))
 done
 [ "$skill_count" -eq 0 ] && echo "  ! warning: no skills found under $REPO/skills/*/SKILL.md"
