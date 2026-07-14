@@ -1,4 +1,4 @@
-# I rebuilt my local Claude Code setup so it stops forgetting everything
+# How I got my local Claude Code setup to stop forgetting everything
 
 Every Claude Code session starts like a brilliant new hire with amnesia.
 
@@ -7,10 +7,11 @@ convention we agreed on, or the half-finished thread I left open. So every
 morning I'd re-explain my own codebase to it. And left alone, it sprints
 straight to code instead of thinking first.
 
-I got tired of that. So I spent a weekend rebuilding my local setup around one
-idea: **a build should make the next build smarter, not start from zero.**
+I got tired of that. My local working setup has come together over the last
+year, all around one idea: **a build should make the next build smarter, not
+start from zero.**
 
-Here's what I landed on.
+Here's where it's landed.
 
 ## The core: memory + discipline, chained
 
