@@ -1,0 +1,24 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (with submodules)
+        uses: actions/checkout@v4
+        with:
+          # Submodules present so install.sh's self-heal is a no-op during the
+          # test run (avoids a network clone mid-test). Content isn't otherwise
+          # exercised — the tests read only the committed .gitmodules + tool.
+          submodules: recursive
+
+      - name: Install uv (for the duckdb tool tests)
+        uses: astral-sh/setup-uv@v5
+
+      - name: Run flow-powers regression suite
+        run: bash tests/test-flow-powers.sh

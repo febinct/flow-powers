@@ -1,6 +1,12 @@
 # flow-powers
 
-A **compounding flywheel** from two tools, each doing only what it's best at:
+[![tests](https://github.com/febinct/flow-powers/actions/workflows/test.yml/badge.svg)](https://github.com/febinct/flow-powers/actions/workflows/test.yml)
+
+A Claude Code plugin for real build work: a **compounding flywheel** at its core,
+an **ambient stack** that keeps the loop lean and sighted, and a small set of
+**skills** — all wired by one installer.
+
+The flywheel is two tools, each doing only what it's best at:
 
 - **[flow](https://github.com/Facets-cloud/flow)** — memory + judgment. What to
   work on, why, status across days, and a KB that `flow done` grows from each
@@ -12,6 +18,13 @@ A **compounding flywheel** from two tools, each doing only what it's best at:
 Neither lacks a *step* — they lack each other's *nature*. Chained, superpowers'
 quality output feeds flow's memory, and flow's memory makes superpowers' next
 brainstorm smarter. That compounding is the point.
+
+Around that core, flow-powers wires in an **ambient stack** — context-mode (keep
+raw output out of the window), LSP parsers (real code intelligence), and the
+Playwright MCP (browser verification for UI changes) — and ships **skills**
+(`flow-powers` the loop, `duckdb-analysis` for SQL over data files). See the
+[ambient stack](#ambient-stack-best-effort-amplifiers-the-installer-wires-in)
+and [skills](#skills-in-this-repo) sections below.
 
 ```
    flow KB (auto-injected)  ──►  superpowers brainstorm starts WARM
@@ -68,8 +81,9 @@ canonical for **HOW**. The **flow brief** is canonical for **WHY + status** and
 ## Learn more
 
 - [`docs/HOW-IT-WORKS.md`](docs/HOW-IT-WORKS.md) — how **flow**, **superpowers**,
-  **context-mode**, and the **LSP parsers** each work on their own (model,
-  mechanism, commands/skills). Start here if any piece is new to you.
+  **context-mode**, the **LSP parsers**, and the **Playwright MCP** each work on
+  their own (model, mechanism, commands/skills). Start here if any piece is new
+  to you.
 - [`docs/DESIGN.md`](docs/DESIGN.md) — the full seam-by-seam integration design.
 
 ## Install
@@ -86,9 +100,10 @@ canonical for **HOW**. The **flow brief** is canonical for **WHY + status** and
 /plugin install flow-powers@flow-powers
 ```
 
-Gets you the `flow-powers` skill and its SessionStart hook. You still need the
-prerequisites above, and this path does **not** wire the ambient stack
-(context-mode + LSP parsers) — for that, use Option B.
+Gets you both skills (`flow-powers` + `duckdb-analysis`) and the SessionStart
+hook. You still need the prerequisites above, and this path does **not** wire the
+ambient stack (context-mode + LSP parsers + Playwright MCP) — for that, use
+Option B. (`duckdb-analysis` also needs `uv` on PATH at runtime.)
 
 > Use the full **HTTPS URL** (not the `febinct/flow-powers` shorthand) — the
 > shorthand resolves to SSH (`git@github.com:…`), which fails without SSH keys;
@@ -98,7 +113,7 @@ prerequisites above, and this path does **not** wire the ambient stack
 
 ```bash
 git clone --recurse-submodules https://github.com/febinct/flow-powers && cd flow-powers
-./install.sh          # symlinks the skill + registers the SessionStart hook,
+./install.sh          # symlinks all skills + registers the SessionStart hook,
                       # then installs the ambient stack and checks LSP binaries
 ```
 
@@ -143,8 +158,9 @@ flow-powers/
 ```
 
 `vendor/` is pinned reference so the glue matches real upstream behaviour; the
-runtime uses your **installed** flow + superpowers. Update reference with
-`git submodule update --remote`.
+runtime uses your **installed** tools + plugins (flow, superpowers, context-mode,
+the LSP parsers, the Playwright MCP), never the vendored copies. Update reference
+with `git submodule update --remote`.
 
 ### Skills in this repo
 
@@ -166,3 +182,17 @@ The repo hosts multiple skills. To add one:
 That's it — `install.sh` symlinks **every** `skills/*/SKILL.md` automatically (no
 installer edit), and marketplace installs read the `plugin.json` array. Hooks are
 shared at the plugin level, so a new skill doesn't need its own hook.
+
+## Tests
+
+```bash
+bash tests/test-flow-powers.sh
+```
+
+A non-destructive regression suite (fixture config dirs + controlled PATH, never
+touches your real `~/.claude`): the LSP doctor, the SessionStart hook's platform
+detection + LSP warning, `install.sh` branches, the multi-skill symlink loop +
+name-clash guard, the DuckDB tool (aggregate / join / parquet round-trip /
+identifier safety), the skill + plugin manifests, and the vendored submodules.
+Runs on every push/PR via [GitHub Actions](.github/workflows/test.yml) (needs
+`uv` locally for the DuckDB checks).
