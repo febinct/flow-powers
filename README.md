@@ -1,6 +1,7 @@
 # flow-powers
 
 [![tests](https://github.com/febinct/flow-powers/actions/workflows/test.yml/badge.svg)](https://github.com/febinct/flow-powers/actions/workflows/test.yml)
+[![license: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 A Claude Code plugin that turns each build into a **compounding loop**: flow
 remembers, superpowers executes, and every finished build makes the next one
@@ -198,3 +199,8 @@ manifests, and submodules. Runs on every push/PR via
 **Deeper docs:** [`docs/HOW-IT-WORKS.md`](docs/HOW-IT-WORKS.md) (each tool on its
 own) · [`docs/DESIGN.md`](docs/DESIGN.md) (seam-by-seam integration) ·
 [`blog.md`](blog.md) (the writeup — why I built this).
+
+## License
+
+[MIT](LICENSE) © 2026 Febin Sathar. The vendored upstreams under `vendor/` keep
+their own licenses.
