@@ -61,31 +61,61 @@ Once the loop worked, adding capabilities got addictive:
 
 ![arch-diagram-builder, drawn by itself](docs/diagrams/arch-diagram-builder.svg)
 
-## The honest lessons (this is the real post)
+## How flow + superpowers actually hand off
 
-Building it taught me more than using it:
+The magic isn't either tool — it's the four seams where they touch, and nothing
+else:
 
-**Silent failures cost the most.** My SessionStart hook — the thing that's
-supposed to load the whole system — was quietly doing nothing for a while. It
-branched on the wrong environment variable, so Claude Code just ignored its
-output. No error. A hook that "runs fine" and a hook whose output is actually
-*used* are two different claims. Test the second one.
+1. **Bind.** `flow do <task>` attaches a Claude session to a task and injects the
+   brief + the knowledge base as the first thing the model reads. The session
+   starts *warm* — it already knows the project, the conventions, the prior
+   decisions. This is the payoff of every previous build.
+2. **Hand off.** flow steps back and superpowers drives: brainstorm the spec
+   (now seeded by that KB), write a plan to a git-tracked file, build it
+   test-first with subagent review, finish on a branch. flow does not touch the
+   *how* — it just held the door open.
+3. **Mark the trail.** At each gate (tests green, review clean) a one-line note
+   lands in the task's log, and the plan's checkboxes track progress. So if a
+   session hits its limit mid-build, the next `flow do` resumes exactly where it
+   stopped. Park-and-resume is a feature, not a failure.
+4. **Close.** `flow done` runs a sweep over the whole transcript and distills the
+   durable facts — what was decided, what the review approved, the conventions
+   used — into the KB. That's the compounding step: what this build learned is
+   waiting warm for the next one.
 
-**"It broke" is usually "it was never wired."** Resume looked broken in Go repos
-— turned out `gopls` had installed to a directory that wasn't on the PATH Claude
-Code inherits. The tool was declared, the binary just wasn't reachable. Now a
-doctor script surfaces that instead of letting it hide.
+The rule that keeps it clean: the plan doc owns *how*, the flow brief owns *why
++ status*, and neither duplicates the other. That single boundary is what stops
+the two tools from fighting.
 
-**The compounding only works if you actually close things.** The entire payoff
-lives in the "close the task" sweep. Half-finished tasks that never close teach
-the system nothing. The machinery isn't the habit — closing the loop is.
+## How the deterministic diagram drawer works
 
-## Would I recommend it?
+The diagram skill is my favorite piece, because it does the one thing LLMs are
+bad at — precise spatial layout — without asking the LLM to do it.
 
-If you do multi-session work worth remembering *and* you'll actually close your
-tasks — yes, it changes how the tool feels by session #50. If you mostly do
-quick one-offs, a good `CLAUDE.md` gets you most of the way with none of the
-overhead. Be honest about which one you are.
+The trick: **the model writes meaning, code computes geometry.** You give it a
+tiny JSON description — nodes, edges, categories — and never a single
+coordinate. A zero-dependency engine turns that into a picture in a fixed
+pipeline:
+
+- **Rank & place.** Nodes are sorted into layers by their dependencies (longest
+  path from the sources), so data flows left-to-right by construction. Workflow
+  diagrams instead drop nodes into swimlane × phase cells. No overlaps, because
+  positions are *derived*, not guessed.
+- **Route the edges orthogonally.** Connectors leave a box, run through the gap
+  *between* columns, and enter the target — so a line never cuts through an
+  unrelated node. When two nodes share a cell, they stack automatically.
+- **Validate before drawing.** Bad references, overlaps, and edges that would
+  cross a node are caught with actionable hints — and I can treat warnings as
+  hard failures, so a messy diagram can't ship.
+- **Render self-contained.** The output is one HTML file: inline SVG, a
+  dark/light theme toggle, and export to PNG/JPEG/WebP (up to 4×) or a
+  theme-following SVG. No server, no dependencies — you send the file, it just
+  opens.
+
+Because layout is deterministic, the same input always produces the same
+diagram, and asking for a change ("add Redis", "move auth left") is a small edit
+to the JSON, not a re-roll of the whole picture. That's the difference between a
+diagram *tool* and a lucky prompt.
 
 It's all open source and tested in CI. Happy to share the repo if it's useful to
 anyone building out their own agent setup.
