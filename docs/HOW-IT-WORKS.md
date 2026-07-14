@@ -19,9 +19,6 @@ Playwright MCP are best-effort amplifiers the loop assumes are present (it still
 runs without them, just noisier, blinder, and unable to *see* UI changes). The
 installer wires all five.
 
-The compounding loop, drawn by this repo's own `arch-diagram-builder` skill
-(dual-theme — follows your color scheme):
-
 ![flow-powers loop](diagrams/flow-powers.svg)
 
 ---
