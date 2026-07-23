@@ -6,6 +6,5 @@
     "name": "febin.sathar"
   },
   "license": "MIT",
-  "skills": ["./skills/flow-powers", "./skills/duckdb-analysis", "./skills/arch-diagram-builder"],
-  "hooks": "./hooks/hooks.json"
+  "skills": ["./skills/flow-powers", "./skills/duckdb-analysis", "./skills/arch-diagram-builder"]
 }
